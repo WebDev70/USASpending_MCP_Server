@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#./test_client.sh 
 # Change to the script's directory
 cd "$(dirname "$0")"
 

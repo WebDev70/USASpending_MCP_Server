@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#./start_mcp_server.sh
 # Change to the script's directory
 cd "$(dirname "$0")"
 
