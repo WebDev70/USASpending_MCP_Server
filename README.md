@@ -52,28 +52,28 @@ The server will run on `http://127.0.0.1:3002` by default.
 ## Claude Integration Options
 
 ### Important Note About Claude Desktop
-As of October 2025, Claude Desktop (including Pro version) cannot directly connect to local MCP servers due to security restrictions. The following options are available for integrating this MCP server with Claude:
+## Claude Desktop Integration
 
-1. **Public Hosting with ngrok** (Recommended for testing)
+This MCP server is configured to work with Claude Desktop using a localhost connection:
+
+1. **Start the MCP Server**
    ```bash
-   # Install ngrok
-   brew install ngrok  # On macOS
+   # Use the provided startup script
+   ./start_server.sh
    
-   # Start your MCP server
-   python mcp_server.py
-   
-   # In a new terminal, create public HTTPS URL
-   ngrok http 3002
+   # Or start manually
+   ./venv/bin/python mcp_server.py
    ```
-   
-   Then update your Claude Desktop configuration:
+
+2. **Configure Claude Desktop**
+   Update your Claude Desktop configuration file:
    ```json
    {
      "tools": [
        {
          "type": "mcp",
          "name": "USASpending API",
-         "url": "https://your-ngrok-url",
+         "url": "http://localhost:3002",
          "description": "Access and query USASpending.gov data through natural language",
          "enabled": true
        }
@@ -81,7 +81,7 @@ As of October 2025, Claude Desktop (including Pro version) cannot directly conne
    }
    ```
 
-2. **Cloud Deployment** (Recommended for production)
+3. **Alternative Deployment Options**
    - Deploy the MCP server to a cloud provider
    - Use HTTPS endpoints
    - Implement proper authentication
@@ -1312,14 +1312,14 @@ gitGraph
 ```mermaid
 graph TD
     A[MCP Server] --> B[Local Usage]
-    A --> C[Public Access]
+    A --> C[Claude Desktop]
     A --> D[Cloud Deployment]
     
     B -->|Example Client| B1[Direct Testing]
     B -->|Python Script| B2[Automation]
     
-    C -->|ngrok| C1[Temporary HTTPS URL]
-    C -->|Claude Desktop| C2[AI Integration]
+    C -->|localhost:3002| C1[Local Connection]
+    C -->|AI Integration| C2[Natural Language Queries]
     
     D -->|AWS/GCP/Azure| D1[Production Deployment]
     D -->|Custom Domain| D2[Permanent Access]
@@ -1474,8 +1474,8 @@ flowchart TD
     C --> C1[Example Client]
     C --> C2[Unit Tests]
     
-    D --> D1[ngrok Tunnel]
-    D --> D2[Claude Desktop]
+    D --> D1[Claude Desktop]
+    D --> D2[Public Testing]
     
     E --> E1[Cloud Provider]
     E --> E2[Custom Domain]
