@@ -1250,6 +1250,85 @@ Planned features:
 
 ## Publishing and Contributing
 
+### Project Architecture
+
+```mermaid
+graph TD
+    A[Client Request] -->|Natural Language Query| B[MCP Server]
+    B -->|Structured Query| C[USASpending.gov API]
+    C -->|Raw Data| B
+    B -->|Formatted Response| A
+    
+    subgraph MCP Server
+        B -->|1. Parse Query| D[Query Processor]
+        D -->|2. Build Filters| E[API Client]
+        E -->|3. Make Request| C
+        C -->|4. Return Data| E
+        E -->|5. Process Results| F[Response Formatter]
+        F -->|6. Format Output| B
+    end
+```
+
+### Publishing Workflow
+
+```mermaid
+graph LR
+    A[Local Changes] -->|git add| B[Staging]
+    B -->|git commit| C[Local Repository]
+    C -->|git push| D[GitHub Repository]
+    
+    subgraph Local Environment
+        A
+        B
+        C
+    end
+    
+    subgraph GitHub
+        D -->|Pull Requests| E[Code Review]
+        E -->|Merge| F[Main Branch]
+    end
+```
+
+### Development Process
+
+```mermaid
+gitGraph
+    commit id: "Initial Setup"
+    branch feature
+    checkout feature
+    commit id: "Add Feature"
+    commit id: "Test Feature"
+    checkout main
+    merge feature
+    branch bugfix
+    checkout bugfix
+    commit id: "Fix Issue"
+    checkout main
+    merge bugfix
+```
+
+### MCP Integration Options
+
+```mermaid
+graph TD
+    A[MCP Server] --> B[Local Usage]
+    A --> C[Public Access]
+    A --> D[Cloud Deployment]
+    
+    B -->|Example Client| B1[Direct Testing]
+    B -->|Python Script| B2[Automation]
+    
+    C -->|ngrok| C1[Temporary HTTPS URL]
+    C -->|Claude Desktop| C2[AI Integration]
+    
+    D -->|AWS/GCP/Azure| D1[Production Deployment]
+    D -->|Custom Domain| D2[Permanent Access]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:4px
+    style C2 fill:#bbf,stroke:#333,stroke-width:2px
+    style D1 fill:#bfb,stroke:#333,stroke-width:2px
+```
+
 ### Initial Setup and Publishing to GitHub
 
 1. **Prepare Your Project**
@@ -1363,6 +1442,50 @@ Planned features:
    - Click "Compare & pull request"
    - Describe your changes
    - Submit pull request
+
+### Data Flow and Processing
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant MCP
+    participant API
+    
+    User->>Client: Natural Language Query
+    Client->>MCP: Format MCP Request
+    MCP->>MCP: Process Query
+    MCP->>API: API Request
+    API->>MCP: Raw Data
+    MCP->>MCP: Format Results
+    MCP->>Client: Structured Response
+    Client->>User: Formatted Output
+```
+
+### Deployment Options
+
+```mermaid
+flowchart TD
+    A[MCP Server] --> B{Deployment Choice}
+    B -->|Local| C[Development]
+    B -->|Public| D[Testing]
+    B -->|Cloud| E[Production]
+    
+    C --> C1[Example Client]
+    C --> C2[Unit Tests]
+    
+    D --> D1[ngrok Tunnel]
+    D --> D2[Claude Desktop]
+    
+    E --> E1[Cloud Provider]
+    E --> E2[Custom Domain]
+    E --> E3[SSL Certificate]
+    
+    classDef choice fill:#f96,stroke:#333,stroke-width:2px
+    classDef deploy fill:#9cf,stroke:#333,stroke-width:2px
+    class B choice
+    class C,D,E deploy
+```
 
 ### Best Practices
 
