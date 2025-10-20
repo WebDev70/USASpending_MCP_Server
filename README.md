@@ -1247,6 +1247,147 @@ Planned features:
 - Aggregate spending analytics
 - Geographic visualization
 - Export capabilities
+
+## Publishing and Contributing
+
+### Initial Setup and Publishing to GitHub
+
+1. **Prepare Your Project**
+   ```bash
+   # Create .gitignore file for Python projects
+   cat > .gitignore << EOL
+   # Python
+   __pycache__/
+   *.py[cod]
+   venv/
+   *.so
+   .Python
+   build/
+   dist/
+   *.egg-info/
+
+   # Environment
+   .env
+   .env.local
+   claude_desktop_config.json
+
+   # IDE
+   .vscode/
+   .idea/
+
+   # OS
+   .DS_Store
+   Thumbs.db
+
+   # Testing
+   .coverage
+   htmlcov/
+   test_backup/
+   EOL
+
+   # Add MIT License
+   # Create LICENSE file with MIT License text
+
+   # Ensure README.md is complete
+   # Add project description, setup instructions, and usage examples
+   ```
+
+2. **Initialize Git Repository**
+   ```bash
+   # Initialize new repository
+   git init
+
+   # Add all files
+   git add .
+
+   # Make initial commit
+   git commit -m "Initial commit: USASpending MCP Server implementation"
+   ```
+
+3. **Connect to GitHub**
+   ```bash
+   # Add GitHub repository as remote
+   git remote add origin https://github.com/WebDev70/USASpending_MCP_Server.git
+
+   # Rename default branch to main
+   git branch -M main
+   ```
+
+4. **Handle Existing Remote Content**
+   ```bash
+   # Configure git pull strategy
+   git config pull.rebase false
+
+   # Pull existing content (if any)
+   git pull origin main --allow-unrelated-histories
+
+   # Resolve any merge conflicts
+   # Edit conflicting files manually
+   git add .
+   git commit -m "Resolved merge conflicts"
+   ```
+
+5. **Push to GitHub**
+   ```bash
+   # Push to GitHub
+   git push -u origin main
+   ```
+
+### Making Changes
+
+1. **Create New Branch**
+   ```bash
+   # Create and switch to new branch
+   git checkout -b feature/new-feature
+   ```
+
+2. **Make Changes**
+   ```bash
+   # Edit files
+   # Test changes
+   # Update documentation
+
+   # Add and commit changes
+   git add .
+   git commit -m "Description of changes"
+   ```
+
+3. **Push Changes**
+   ```bash
+   # Push to GitHub
+   git push origin feature/new-feature
+   ```
+
+4. **Create Pull Request**
+   - Go to GitHub repository
+   - Click "Compare & pull request"
+   - Describe your changes
+   - Submit pull request
+
+### Best Practices
+
+1. **Before Publishing**
+   - Remove sensitive information
+   - Update requirements.txt
+   - Test all functionality
+   - Complete documentation
+   - Add license information
+
+2. **Commit Messages**
+   - Use clear, descriptive messages
+   - Start with verb (Add, Update, Fix, etc.)
+   - Reference issues if applicable
+
+3. **Branch Management**
+   - Use feature branches for new work
+   - Keep main branch stable
+   - Delete merged feature branches
+
+4. **Security**
+   - Never commit API keys
+   - Use environment variables
+   - Keep dependencies updated
+   - Review access permissions
 =======
 # USASpending_MCP_Server
 An MCP (Model Context Protocol) server that provides natural language access to USASpending.gov data. This server allows you to query federal spending data, including contracts, grants, and other federal awards using natural language queries.
