@@ -22,4 +22,4 @@ cleanup() {
 trap cleanup SIGINT
 
 # Start the server
-./venv/bin/python mcp_server.py
+./.venv/bin/python mcp_server.py
