@@ -13,27 +13,19 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 from functools import lru_cache
-from mcp.server import Server
-from mcp.types import (
-    Tool,
-    TextContent,
-    ImageContent,
-    EmbeddedResource,
-    LoggingLevel
-)
-from fastapi import FastAPI, Request
-from starlette.responses import JSONResponse
 import uvicorn
+from fastmcp import FastMCP
+from mcp.types import TextContent
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.INFO,  # Changed from DEBUG to INFO for cleaner output
+    format='%(levelname)s:%(name)s:%(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Initialize MCP server
-app = Server("usaspending-server")
-
-# Initialize FastAPI app
-fastapi_app = FastAPI()
+# Initialize FastMCP server
+app = FastMCP(name="usaspending-server")
 
 # Base URL for USASpending API
 BASE_URL = "https://api.usaspending.gov/api/v2"
@@ -67,101 +59,30 @@ async def make_api_request(endpoint: str, params: dict = None, method: str = "GE
         logger.error(f"API request error: {str(e)}")
         return {"error": f"API request error: {str(e)}"}
 
-@fastapi_app.post("/")
-async def handle_mcp_request(request: Request) -> JSONResponse:
-    """Handle incoming MCP requests"""
-    try:
-        body = await request.json()
-        logger.debug(f"Received request: {body}")
-        
-        # Extract the messages from the request
-        messages = body.get("messages", [])
-        if not messages:
-            raise ValueError("No messages in request")
-            
-        # Process each message with the MCP server
-        responses = []
-        for msg in messages:
-            if msg.get("role") == "user":
-                for content in msg.get("content", []):
-                    if content.get("type") == "tool_use":
-                        tool_responses = await call_tool(content.get("tool_name"), content.get("tool_arguments", {}))
-                        # Convert TextContent objects to dictionaries
-                        for resp in tool_responses:
-                            if isinstance(resp, TextContent):
-                                responses.append({
-                                    "type": resp.type,
-                                    "text": resp.text,
-                                    "annotations": resp.annotations,
-                                    "meta": resp.meta
-                                })
-                            
-        logger.debug(f"Sending response: {responses}")
-        return JSONResponse(content={"response": responses})
-    except Exception as e:
-        logger.error(f"Error handling request: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@fastapi_app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok", "server": "usaspending-mcp"}
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools for querying USASpending data"""
-    return [
-        Tool(
-            name="search_federal_awards",
-            description="""Search federal spending data from USASpending.gov to find contracts, grants, loans, and other federal awards. 
+@app.tool(
+    name="search_federal_awards",
+    description="""Search federal spending data from USASpending.gov to find contracts, grants, loans, and other federal awards. 
 You can search by keywords related to the award description, recipient name, or purpose.
 Examples:
 - Search for software development contracts
 - Find construction grants in specific states
 - Look up technology research funding
 - Find training and education contracts""",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Natural language description of what you're looking for. Example: 'Find recent software development contracts' or 'Show me construction grants'"
-                    },
-                    "max_results": {
-                        "type": "integer",
-                        "description": "Maximum number of results to return (default 5, max 100)",
-                        "default": 5
-                    }
-                },
-                "required": ["query"]
-            }
-        )
-    ]
-
-@app.call_tool()
-async def call_tool(name: str, arguments: Any) -> list[TextContent]:
-    """Handle tool calls from Claude"""
-    logger.debug(f"Tool call received: {name} with arguments {arguments}")
-    
-    if name == "search_federal_awards":
-        query = arguments.get("query", "")
-        max_results = min(arguments.get("max_results", 5), 100)
-        
-        # Extract keywords from natural language query
-        keywords = " ".join([
-            word for word in query.lower().split() 
-            if word not in {"find", "show", "me", "get", "search", "for", "the", "and", "or", "in"}
-        ])
-        
-        return await search_awards({"keywords": keywords, "limit": max_results})
-    else:
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
-
-async def search_awards(args: dict) -> list[TextContent]:
+)
+async def search_federal_awards(query: str, max_results: int = 5) -> list[TextContent]:
     """Search for federal awards"""
+    logger.debug(f"Tool call received: search_federal_awards with query='{query}' and max_results={max_results}")
+    
+    # Extract keywords from natural language query
+    keywords = " ".join([
+        word for word in query.lower().split() 
+        if word not in {"find", "show", "me", "get", "search", "for", "the", "and", "or", "in"}
+    ])
+    
+    return await search_awards_logic({"keywords": keywords, "limit": max_results})
+
+async def search_awards_logic(args: dict) -> list[TextContent]:
+    """Logic for searching federal awards"""
     # Build filters based on arguments
     filters = {
         "keywords": [args.get("keywords", "")],
@@ -233,7 +154,7 @@ def run_server():
     """Run the server with proper signal handling"""
     try:
         logger.info("Starting server on http://127.0.0.1:3002")
-        uvicorn.run(fastapi_app, host="127.0.0.1", port=3002, log_level="info", reload=False)
+        uvicorn.run(app.http_app(), host="127.0.0.1", port=3002, log_level="info", reload=False)
     except KeyboardInterrupt:
         logger.info("Received shutdown signal, shutting down gracefully...")
     except Exception as e:
@@ -241,6 +162,24 @@ def run_server():
     finally:
         logger.info("Server shutdown complete")
 
+async def run_stdio():
+    """Run the server using stdio transport (for MCP clients)"""
+    from mcp.server.stdio import stdio_server
+    
+    async with stdio_server() as (read_stream, write_stream):
+        await app._mcp_server.run(
+            read_stream,
+            write_stream,
+            app._mcp_server.create_initialization_options()
+        )
+
 if __name__ == "__main__":
-    # Start server with proper signal handling
-    run_server()
+    import sys
+    
+    # Check if we should run in stdio mode (for MCP client) or HTTP mode (for Claude Desktop)
+    if len(sys.argv) > 1 and sys.argv[1] == "--stdio":
+        # Run in stdio mode for MCP client testing
+        asyncio.run(run_stdio())
+    else:
+        # Run in HTTP mode for Claude Desktop
+        run_server()
