@@ -36,9 +36,9 @@ app = FastMCP(name="usaspending-server")
 BASE_URL = "https://api.usaspending.gov/api/v2"
 
 # Register modular tool sets
-# FAR tools are registered from the src.tools module
+# FAR tools are registered from the usaspending_mcp.tools module
 try:
-    from src.tools.far_tools import register_far_tools
+    from usaspending_mcp.tools.far import register_far_tools
     register_far_tools(app)
     logger.info("FAR tools registered successfully")
 except Exception as e:
@@ -642,6 +642,26 @@ class QueryParser:
             return "*"
         return " ".join(self.keywords)
 
+def generate_award_url(internal_id: str) -> str:
+    """Generate USASpending.gov award URL"""
+    if internal_id:
+        return f"https://www.usaspending.gov/award/{internal_id}"
+    return ""
+
+def generate_recipient_url(recipient_hash: str) -> str:
+    """Generate USASpending.gov recipient profile URL"""
+    if recipient_hash:
+        return f"https://www.usaspending.gov/recipient/{recipient_hash}/latest"
+    return ""
+
+def generate_agency_url(agency_name: str, fiscal_year: str = "2025") -> str:
+    """Generate USASpending.gov agency profile URL"""
+    if agency_name:
+        # URL encode the agency name by replacing spaces with hyphens
+        agency_slug = agency_name.lower().replace(" ", "-").replace(".", "").replace("&", "and")
+        return f"https://www.usaspending.gov/agency/{agency_slug}?fy={fiscal_year}"
+    return ""
+
 def format_currency(amount: float) -> str:
     """Format currency values"""
     if amount >= 1_000_000_000:
@@ -706,7 +726,9 @@ async def get_award_by_id(award_id: str) -> list[TextContent]:
                 "Award Amount",
                 "Description",
                 "Award Type",
-                "generated_internal_id"
+                "generated_internal_id",
+                "recipient_hash",
+                "awarding_agency_name"
             ],
             "page": 1,
             "limit": 1
@@ -727,7 +749,23 @@ async def get_award_by_id(award_id: str) -> list[TextContent]:
                 output += f"Amount: ${float(award.get('Award Amount', 0)):,.2f}\n"
                 output += f"Type: {award.get('Award Type', 'N/A')}\n"
                 output += f"Description: {award.get('Description', 'N/A')}\n"
-                output += f"\nDetails: https://www.usaspending.gov/award/{award.get('generated_internal_id', '')}\n"
+
+                # Add USASpending.gov Links
+                output += f"\nLinks:\n"
+                internal_id = award.get('generated_internal_id', '')
+                recipient_hash = award.get('recipient_hash', '')
+                awarding_agency = award.get('awarding_agency_name', '')
+
+                if internal_id:
+                    award_url = generate_award_url(internal_id)
+                    output += f"  • Award: {award_url}\n"
+                if recipient_hash:
+                    recipient_url = generate_recipient_url(recipient_hash)
+                    output += f"  • Recipient Profile: {recipient_url}\n"
+                if awarding_agency:
+                    agency_url = generate_agency_url(awarding_agency)
+                    output += f"  • Awarding Agency: {agency_url}\n"
+
                 return [TextContent(type="text", text=output)]
             else:
                 return [TextContent(type="text", text=f"No award found with ID: {award_id}\n\nNote: The award may be older than 2020 or the ID may be formatted differently.")]
@@ -1351,6 +1389,8 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
             "Description",
             "Award Type",
             "generated_internal_id",
+            "recipient_hash",
+            "awarding_agency_name",
             "NAICS Code",
             "NAICS Description",
             "PSC Code",
@@ -1432,6 +1472,8 @@ def format_awards_as_text(awards: list, total_count: int, current_page: int, has
         naics_desc = award.get('NAICS Description', '')
         psc_code = award.get('PSC Code', '')
         psc_desc = award.get('PSC Description', '')
+        recipient_hash = award.get('recipient_hash', '')
+        awarding_agency = award.get('awarding_agency_name', '')
 
         output += f"{i}. {recipient}\n"
         output += f"   Award ID: {award_id}\n"
@@ -1452,9 +1494,21 @@ def format_awards_as_text(awards: list, total_count: int, current_page: int, has
         if description:
             desc = description[:150]
             output += f"   Description: {desc}{'...' if len(description) > 150 else ''}\n"
-        # Add award detail link
+
+        # Add USASpending.gov Links
+        output += "   Links:\n"
+        # Award link
         if internal_id:
-            output += f"   Details: https://www.usaspending.gov/award/{internal_id}\n"
+            award_url = generate_award_url(internal_id)
+            output += f"      • Award: {award_url}\n"
+        # Recipient profile link
+        if recipient_hash:
+            recipient_url = generate_recipient_url(recipient_hash)
+            output += f"      • Recipient Profile: {recipient_url}\n"
+        # Agency profile link
+        if awarding_agency:
+            agency_url = generate_agency_url(awarding_agency)
+            output += f"      • Awarding Agency: {agency_url}\n"
         output += "\n"
 
     # Add pagination info
@@ -1472,7 +1526,7 @@ def format_awards_as_csv(awards: list, total_count: int, current_page: int, has_
     writer = csv.writer(output)
 
     # Write header
-    writer.writerow(["Recipient Name", "Award ID", "Amount ($)", "Award Type", "NAICS Code", "NAICS Description", "PSC Code", "PSC Description", "Description", "Details URL"])
+    writer.writerow(["Recipient Name", "Award ID", "Amount ($)", "Award Type", "NAICS Code", "NAICS Description", "PSC Code", "PSC Description", "Description", "Award URL", "Recipient Profile URL", "Agency URL"])
 
     # Write data rows
     for award in awards:
@@ -1486,9 +1540,15 @@ def format_awards_as_csv(awards: list, total_count: int, current_page: int, has_
         psc_desc = award.get('PSC Description', '')
         description = award.get('Description', '')[:200]  # Limit description length
         internal_id = award.get('generated_internal_id', '')
-        details_url = f"https://www.usaspending.gov/award/{internal_id}" if internal_id else ""
+        recipient_hash = award.get('recipient_hash', '')
+        awarding_agency = award.get('awarding_agency_name', '')
 
-        writer.writerow([recipient, award_id, amount, award_type, naics_code, naics_desc, psc_code, psc_desc, description, details_url])
+        # Generate URLs
+        award_url = generate_award_url(internal_id)
+        recipient_url = generate_recipient_url(recipient_hash)
+        agency_url = generate_agency_url(awarding_agency)
+
+        writer.writerow([recipient, award_id, amount, award_type, naics_code, naics_desc, psc_code, psc_desc, description, award_url, recipient_url, agency_url])
 
     csv_output = output.getvalue()
     output.close()

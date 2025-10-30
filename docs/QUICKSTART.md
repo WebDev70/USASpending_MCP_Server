@@ -1,12 +1,17 @@
 # USASpending MCP Server - Quick Start Guide
 
-**Status**: ✅ Production Ready - October 29, 2025
+**Status**: ✅ Production Ready - October 30, 2025
+**Architecture**: FastMCP with FAR Regulatory Tools Integration
 
 ---
 
 ## One-Minute Overview
 
-You have a **fully functional, 21-tool federal spending analysis server** ready to use with Claude Desktop.
+A **fully functional federal spending analysis server** with:
+- Federal spending search and analysis tools
+- FAR (Federal Acquisition Regulation) lookup tools for procurement professionals
+- Support for Claude Desktop and command-line testing
+- Real-time USASpending.gov API integration with direct links back to award pages
 
 ---
 
@@ -17,6 +22,7 @@ You have a **fully functional, 21-tool federal spending analysis server** ready 
 cd /Users/ronaldblakejr/Documents/MCP_Server/usaspending-mcp
 ./test_mcp_client.sh
 # Enter a query like: "software contracts"
+# Enter number of results: 10
 ```
 
 ### Option 2: Use with Claude Desktop (5 minutes)
@@ -124,26 +130,36 @@ Results: 10
 
 ```
 /Users/ronaldblakejr/Documents/MCP_Server/usaspending-mcp/
-├── mcp_server.py              ← Main code (3,000+ lines, 21 tools)
-├── README.md                  ← Project overview
+├── src/usaspending_mcp/               ← Production code
+│   ├── __init__.py                    ← Package exports
+│   ├── server.py                      ← FastMCP server (136KB)
+│   ├── client.py                      ← Test/debug client
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   └── far.py                     ← FAR tools (Parts 14, 15, 16, 19)
+│   └── loaders/
+│       ├── __init__.py
+│       └── far.py                     ← FAR data loading utilities
 ├── docs/
-│   ├── QUICKSTART.md          ← This file
-│   ├── INSTRUCTIONS.md        ← User guide (2,600 lines)
+│   ├── QUICKSTART.md                  ← This file
+│   ├── INSTRUCTIONS.md                ← User guide
 │   ├── TROUBLESHOOTING_GUIDE.md
 │   ├── QUERY_PATTERNS_COOKBOOK.md
+│   ├── far_part*.json                 ← FAR regulatory data
 │   ├── api/
-│   │   ├── MCP_API_REFERENCE.md       ← Tool reference (22 KB)
+│   │   ├── MCP_API_REFERENCE.md       ← Tools reference
 │   │   ├── USASPENDING_API_V2_SEARCH_ENDPOINTS.md
 │   │   └── USASPENDING_API_V2_EXAMPLES_AND_APPENDIX.md
 │   └── dev/
-│       ├── TESTING_GUIDE.md           ← Testing documentation
 │       ├── ARCHITECTURE_GUIDE.md
+│       ├── TESTING_GUIDE.md
 │       ├── SERVER_MANAGER_GUIDE.md
 │       └── PRODUCTION_MONITORING_GUIDE.md
-├── mcp_client.py              ← Test client
-├── start_mcp_server.sh        ← HTTP server launcher
-├── test_mcp_client.sh         ← CLI test harness
-└── requirements.txt           ← Dependencies
+├── README.md                          ← Project overview
+├── requirements.txt                   ← Python dependencies
+├── start_mcp_server.sh                ← HTTP server launcher
+├── test_mcp_client.sh                 ← CLI test harness
+└── LICENSE                            ← MIT License
 ```
 
 ---

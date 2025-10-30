@@ -1,7 +1,5 @@
 # USASpending MCP Server with FAR Regulatory Tools
 
-printf "test\n1\n" | ./test_mcp_client.sh 2>/dev/null | tail -15;
-
 A FastMCP server that provides access to USASpending.gov federal spending data and FAR (Federal Acquisition Regulation) lookup tools through the Model Context Protocol (MCP). Query contracts, grants, loans, and other federal awards using natural language, and reference procurement regulations instantly.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -43,7 +41,7 @@ pip install -r requirements.txt
 ./test_mcp_client.sh
 
 # Or run directly
-./.venv/bin/python mcp_client.py
+PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 ```
 
 **Example queries:**
@@ -64,27 +62,36 @@ Then configure Claude Desktop to connect to `http://localhost:3002/mcp`
 
 ```
 usaspending-mcp/
-├── mcp_server.py           # FastMCP server (main application)
-├── mcp_client.py           # MCP test client
-├── requirements.txt        # Python dependencies
-├── README.md               # This file (main entry point)
-├── docs/                   # Documentation
-│   ├── QUICKSTART.md       # Quick start guide
-│   ├── INSTRUCTIONS.md     # Complete user guide
+├── src/usaspending_mcp/           # Main package (production code)
+│   ├── __init__.py                # Package initialization & exports
+│   ├── server.py                  # FastMCP server with all tools
+│   ├── client.py                  # MCP test/debug client
+│   ├── tools/                     # MCP tool modules
+│   │   ├── __init__.py
+│   │   └── far.py                 # FAR (Part 14, 15, 16, 19) tools
+│   └── loaders/                   # Data loading utilities
+│       ├── __init__.py
+│       └── far.py                 # FAR data loaders
+├── docs/                          # Documentation
+│   ├── QUICKSTART.md              # Quick start guide
+│   ├── INSTRUCTIONS.md            # Complete user guide
 │   ├── TROUBLESHOOTING_GUIDE.md
 │   ├── QUERY_PATTERNS_COOKBOOK.md
-│   ├── api/                # API reference docs
+│   ├── far_part*.json             # FAR regulatory data (14, 15, 16, 19)
+│   ├── api/                       # API reference docs
 │   │   ├── MCP_API_REFERENCE.md
 │   │   ├── USASPENDING_API_V2_SEARCH_ENDPOINTS.md
 │   │   └── USASPENDING_API_V2_EXAMPLES_AND_APPENDIX.md
-│   └── dev/                # Developer documentation
+│   └── dev/                       # Developer documentation
 │       ├── ARCHITECTURE_GUIDE.md
 │       ├── TESTING_GUIDE.md
 │       ├── SERVER_MANAGER_GUIDE.md
 │       └── PRODUCTION_MONITORING_GUIDE.md
-├── start_mcp_server.sh     # Start HTTP server for Claude Desktop
-├── test_mcp_client.sh      # Test script (recommended)
-└── LICENSE                 # MIT License
+├── requirements.txt               # Python dependencies
+├── README.md                       # This file
+├── start_mcp_server.sh            # Start HTTP server for Claude Desktop
+├── test_mcp_client.sh             # Test client script
+└── LICENSE                        # MIT License
 ```
 
 ## Usage
@@ -98,7 +105,7 @@ The server supports stdio transport for testing and development:
 ./test_mcp_client.sh
 
 # Or run the client directly
-./.venv/bin/python mcp_client.py
+PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 ```
 
 When prompted:
@@ -135,15 +142,21 @@ Add to your Claude Desktop configuration file:
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
+**Using stdio transport (recommended):**
+
 ```json
 {
   "mcpServers": {
     "usaspending": {
       "command": "/path/to/usaspending-mcp/.venv/bin/python",
       "args": [
-        "/path/to/usaspending-mcp/mcp_server.py",
+        "-m",
+        "usaspending_mcp.server",
         "--stdio"
-      ]
+      ],
+      "env": {
+        "PYTHONPATH": "/path/to/usaspending-mcp/src"
+      }
     }
   }
 }
@@ -159,6 +172,11 @@ Add to your Claude Desktop configuration file:
     }
   }
 }
+```
+
+Then start the server with:
+```bash
+./start_mcp_server.sh
 ```
 
 ### Using with Claude
@@ -202,7 +220,7 @@ Search federal spending data from USASpending.gov.
 ./test_mcp_client.sh
 
 # Manual testing
-./.venv/bin/python mcp_client.py
+PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 ```
 
 ### Server Modes
@@ -211,24 +229,24 @@ The server supports two modes:
 
 **1. stdio Mode (for MCP clients and testing)**
 ```bash
-python mcp_server.py --stdio
+PYTHONPATH=src python -m usaspending_mcp.server --stdio
 ```
 
 **2. HTTP Mode (for Claude Desktop)**
 ```bash
-python mcp_server.py
+PYTHONPATH=src python -m usaspending_mcp.server
 # Starts on http://127.0.0.1:3002/mcp
 ```
 
 ### Code Structure
 
-**mcp_server.py:**
+**src/usaspending_mcp/server.py:**
 - FastMCP server initialization
 - Tool definitions (`@app.tool` decorator)
 - USASpending.gov API integration
 - Dual transport support (stdio/HTTP)
 
-**mcp_client.py:**
+**src/usaspending_mcp/client.py:**
 - MCP protocol client
 - stdio transport
 - Testing and validation

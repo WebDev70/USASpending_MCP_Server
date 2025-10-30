@@ -19,7 +19,8 @@ Your current **single monolithic MCP server with 21 tools** is the **correct arc
 
 ```
 ┌─────────────────────────────────────────┐
-│   Single MCP Server (mcp_server.py)     │
+│ Single MCP Server (src/usaspending_mcp/ │
+│ server.py)                              │
 │                                         │
 │  21 Tools - Unified Context            │
 │  - Awards Search & Details (5)          │
@@ -194,7 +195,7 @@ Since monolithic is recommended, here's how to keep it maintainable:
 ### 1. Tool Organization (Within Single Server)
 
 ```python
-# mcp_server.py - Organize by domain
+# src/usaspending_mcp/server.py - Organize by domain
 
 # ===== AWARDS DOMAIN =====
 @app.tool()
@@ -326,7 +327,7 @@ If you ever need to split, here's the safe migration:
 
 ```bash
 Step 1: Create tool domains (still in one server)
-  mcp_server.py → domain_based organization
+  src/usaspending_mcp/server.py → domain_based organization
 
 Step 2: Create domain modules
   mcp_domains/
@@ -424,7 +425,7 @@ For your current situation: **All are NO → Stay monolithic** ✅
 ## Example: Organized Monolithic Server
 
 ```python
-# mcp_server.py - Clean organization example
+# src/usaspending_mcp/server.py - Clean organization example
 
 from fastmcp import FastMCP
 from mcp_domains import awards, recipients, analytics, reference
@@ -499,7 +500,7 @@ Focus on:
 ---
 
 **Next Steps**:
-1. Refactor `mcp_server.py` to organize by domain (optional but recommended)
+1. Refactor `src/usaspending_mcp/server.py` to organize by domain (optional but recommended)
 2. Create `mcp_domains/` module structure
 3. Continue leveraging single-server benefits
 4. Monitor metrics as tool count grows

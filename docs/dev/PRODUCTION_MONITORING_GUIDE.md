@@ -363,7 +363,7 @@ pip install prometheus-client flask-prometheus
 ```python
 from monitoring import setup_monitoring
 
-# In mcp_server.py
+# In src/usaspending_mcp/server.py
 setup_monitoring(app)
 ```
 

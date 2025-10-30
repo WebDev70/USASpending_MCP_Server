@@ -87,7 +87,7 @@ async def query_awards():
     async with AsyncExitStack() as stack:
         server_params = StdioServerParameters(
             command=".venv/bin/python",
-            args=["mcp_server.py"]
+            args=["-m", "usaspending_mcp.server"]
         )
 
         stdio_transport = await stack.enter_async_context(
@@ -427,5 +427,5 @@ kill_process_on_port(3002, force=False)  # Try graceful first
 ## See Also
 
 - `query_gsa_awards.py` - Example usage in CLI tool
-- `mcp_server.py` - The server being managed
+- `src/usaspending_mcp/server.py` - The server being managed
 - `start_mcp_server.sh` - Bash script wrapper
