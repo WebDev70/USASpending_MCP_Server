@@ -1,14 +1,18 @@
-# USASpending MCP Server
+# USASpending MCP Server with FAR Regulatory Tools
 
-printf "test\n1\n" | ./test_mcp_client.sh 2>/dev/null | tail -15; 
+printf "test\n1\n" | ./test_mcp_client.sh 2>/dev/null | tail -15;
 
-A FastMCP server that provides access to USASpending.gov federal spending data through the Model Context Protocol (MCP). Query contracts, grants, loans, and other federal awards using natural language or integrate with Claude Desktop.
+A FastMCP server that provides access to USASpending.gov federal spending data and FAR (Federal Acquisition Regulation) lookup tools through the Model Context Protocol (MCP). Query contracts, grants, loans, and other federal awards using natural language, and reference procurement regulations instantly.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
 - 🔍 **Natural language queries** for federal spending data
+- ⚖️ **Multi-part FAR lookup tools** for procurement professionals (Parts 14, 15, 16, 19)
+  - `lookup_far_section` - Direct section lookup by number (auto-detects part)
+  - `search_far` - Cross-part keyword search with relevance scoring
+  - `list_far_sections` - Complete FAR index (210 sections across all parts)
 - 🚀 **FastMCP integration** for modern MCP protocol support
 - 🔌 **Dual transport modes**: stdio (testing) and HTTP (Claude Desktop)
 - 📊 **Real-time data** from USASpending.gov API
@@ -63,9 +67,23 @@ usaspending-mcp/
 ├── mcp_server.py           # FastMCP server (main application)
 ├── mcp_client.py           # MCP test client
 ├── requirements.txt        # Python dependencies
+├── README.md               # This file (main entry point)
+├── docs/                   # Documentation
+│   ├── QUICKSTART.md       # Quick start guide
+│   ├── INSTRUCTIONS.md     # Complete user guide
+│   ├── TROUBLESHOOTING_GUIDE.md
+│   ├── QUERY_PATTERNS_COOKBOOK.md
+│   ├── api/                # API reference docs
+│   │   ├── MCP_API_REFERENCE.md
+│   │   ├── USASPENDING_API_V2_SEARCH_ENDPOINTS.md
+│   │   └── USASPENDING_API_V2_EXAMPLES_AND_APPENDIX.md
+│   └── dev/                # Developer documentation
+│       ├── ARCHITECTURE_GUIDE.md
+│       ├── TESTING_GUIDE.md
+│       ├── SERVER_MANAGER_GUIDE.md
+│       └── PRODUCTION_MONITORING_GUIDE.md
 ├── start_mcp_server.sh     # Start HTTP server for Claude Desktop
 ├── test_mcp_client.sh      # Test script (recommended)
-├── README.md               # This file
 └── LICENSE                 # MIT License
 ```
 
@@ -271,7 +289,6 @@ chmod +x start_mcp_server.sh
 - `mcp>=1.18.0` - MCP protocol library
 - `httpx>=0.27.0` - HTTP client
 - `uvicorn[standard]>=0.15.0` - ASGI server
-- `fastapi>=0.68.0` - Web framework
 - `pydantic>=2.0.0` - Data validation
 
 ## Contributing

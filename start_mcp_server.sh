@@ -1,25 +1,9 @@
 #!/bin/bash
-#./start_mcp_server.sh
+# Start MCP Server with automatic port cleanup
+# This script delegates to server_manager.py for robust server lifecycle management
+
 # Change to the script's directory
 cd "$(dirname "$0")"
 
-# Kill any existing server on port 3002
-echo "Stopping any existing server..."
-lsof -ti:3002 | xargs kill -9 2>/dev/null || true
-
-echo "Starting USASpending MCP Server..."
-echo "Server will run on http://localhost:3002"
-echo "Press Ctrl+C to stop the server"
-echo ""
-
-# Cleanup function
-cleanup() {
-    echo ""
-    echo "Shutting down server..."
-    exit 0
-}
-
-trap cleanup SIGINT
-
-# Start the server
-./.venv/bin/python mcp_server.py
+# Use server_manager.py to start the server (handles port cleanup, auto-kill, etc.)
+./.venv/bin/python server_manager.py start "$@"

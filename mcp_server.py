@@ -35,6 +35,15 @@ app = FastMCP(name="usaspending-server")
 # Base URL for USASpending API
 BASE_URL = "https://api.usaspending.gov/api/v2"
 
+# Register modular tool sets
+# FAR tools are registered from the src.tools module
+try:
+    from src.tools.far_tools import register_far_tools
+    register_far_tools(app)
+    logger.info("FAR tools registered successfully")
+except Exception as e:
+    logger.warning(f"Could not register FAR tools: {e}")
+
 # HTTP client with timeout
 http_client = httpx.AsyncClient(timeout=30.0)
 
@@ -462,6 +471,34 @@ def get_default_date_range() -> tuple[str, str]:
     start_date = today - timedelta(days=180)
     return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
 
+def get_date_range(start_date: Optional[str] = None, end_date: Optional[str] = None) -> tuple[str, str]:
+    """
+    Get date range - use provided dates or default to 180-day lookback
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format (optional)
+        end_date: End date in YYYY-MM-DD format (optional)
+
+    Returns:
+        Tuple of (start_date, end_date) in YYYY-MM-DD format
+    """
+    today = datetime.now()
+
+    # Use provided dates or default to 180-day lookback
+    if start_date is None:
+        start_date = (today - timedelta(days=180)).strftime("%Y-%m-%d")
+    if end_date is None:
+        end_date = today.strftime("%Y-%m-%d")
+
+    # Validate date format
+    try:
+        datetime.strptime(start_date, "%Y-%m-%d")
+        datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError as e:
+        return get_default_date_range()  # Fall back to default on format error
+
+    return start_date, end_date
+
 class QueryParser:
     """Parse advanced search queries with support for quoted phrases, boolean operators, and filters"""
 
@@ -632,6 +669,73 @@ async def make_api_request(endpoint: str, params: dict = None, method: str = "GE
         return {"error": f"API request error: {str(e)}"}
 
 @app.tool(
+    name="get_award_by_id",
+    description="""Get a specific federal award by its exact Award ID.
+
+This tool looks up a single award using its Award ID from USASpending.gov.
+
+PARAMETERS:
+- award_id: The Award ID (e.g., "47QSWA26P02KE", "W91QF425PA017")
+
+RETURNS:
+- Award ID
+- Recipient Name
+- Award Amount
+- Award Description
+- Award Type
+- Direct link to USASpending.gov award details
+
+EXAMPLES:
+- "47QSWA26P02KE" → Gets the Giga Inc Oshkosh truck part award
+- "W91QF425PA017" → Gets the James B Studdard moving services award
+""",
+)
+async def get_award_by_id(award_id: str) -> list[TextContent]:
+    """Get a specific award by Award ID"""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Search for the specific award ID
+        payload = {
+            "filters": {
+                "keywords": [award_id],
+                "award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09", "10", "11"],
+                "time_period": [{"start_date": "2020-01-01", "end_date": "2026-12-31"}]
+            },
+            "fields": [
+                "Award ID",
+                "Recipient Name",
+                "Award Amount",
+                "Description",
+                "Award Type",
+                "generated_internal_id"
+            ],
+            "page": 1,
+            "limit": 1
+        }
+
+        try:
+            response = await client.post(
+                "https://api.usaspending.gov/api/v2/search/spending_by_award",
+                json=payload
+            )
+            result = response.json()
+
+            if "results" in result and len(result["results"]) > 0:
+                award = result["results"][0]
+                output = f"Award Found!\n\n"
+                output += f"Award ID: {award.get('Award ID', 'N/A')}\n"
+                output += f"Recipient: {award.get('Recipient Name', 'N/A')}\n"
+                output += f"Amount: ${float(award.get('Award Amount', 0)):,.2f}\n"
+                output += f"Type: {award.get('Award Type', 'N/A')}\n"
+                output += f"Description: {award.get('Description', 'N/A')}\n"
+                output += f"\nDetails: https://www.usaspending.gov/award/{award.get('generated_internal_id', '')}\n"
+                return [TextContent(type="text", text=output)]
+            else:
+                return [TextContent(type="text", text=f"No award found with ID: {award_id}\n\nNote: The award may be older than 2020 or the ID may be formatted differently.")]
+
+        except Exception as e:
+            return [TextContent(type="text", text=f"Error retrieving award: {str(e)}")]
+
+@app.tool(
     name="search_federal_awards",
     description="""Search federal spending data from USASpending.gov to find contracts, grants, loans, and other federal awards.
 
@@ -639,6 +743,8 @@ PARAMETERS:
 - query: Search query with advanced syntax (see below)
 - max_results: Maximum results to return (1-100, default 5)
 - output_format: Output format - "text" (default) or "csv"
+- start_date: Search start date in YYYY-MM-DD format (optional, defaults to 180 days ago)
+- end_date: Search end date in YYYY-MM-DD format (optional, defaults to today)
 
 SUPPORTED QUERY SYNTAX:
 - Keywords: "software development" searches for both keywords
@@ -679,13 +785,26 @@ EXAMPLES:
 - "software agency:gsa output_format:csv" → GSA software contracts as CSV
 """,
 )
-async def search_federal_awards(query: str, max_results: int = 5, output_format: str = "text") -> list[TextContent]:
-    """Search for federal awards with advanced query syntax"""
-    logger.debug(f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}")
+async def search_federal_awards(
+    query: str,
+    max_results: int = 5,
+    output_format: str = "text",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> list[TextContent]:
+    """Search for federal awards with advanced query syntax and optional date range"""
+    logger.debug(f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}")
 
     # Validate output format
     if output_format not in ["text", "csv"]:
         output_format = "text"
+
+    # Validate max_results
+    if max_results < 1 or max_results > 100:
+        max_results = 5
+
+    # Get the date range (use provided dates or default)
+    actual_start_date, actual_end_date = get_date_range(start_date, end_date)
 
     # Parse the query for advanced features
     parser = QueryParser(query)
@@ -701,7 +820,9 @@ async def search_federal_awards(query: str, max_results: int = 5, output_format:
         "toptier_agency": parser.toptier_agency,
         "subtier_agency": parser.subtier_agency,
         "limit": max_results,
-        "output_format": output_format
+        "output_format": output_format,
+        "start_date": actual_start_date,
+        "end_date": actual_end_date
     })
 
 @app.tool(
@@ -1152,8 +1273,12 @@ def generate_spending_analytics(awards: list, total_count: int) -> str:
     return output
 
 async def search_awards_logic(args: dict) -> list[TextContent]:
-    # Get default date range (180-day lookback)
-    start_date, end_date = get_default_date_range()
+    # Get date range from args or use default (180-day lookback)
+    start_date = args.get("start_date")
+    end_date = args.get("end_date")
+
+    if start_date is None or end_date is None:
+        start_date, end_date = get_default_date_range()
 
     # Build filters based on arguments
     filters = {
@@ -1497,7 +1622,16 @@ async def get_spending_trends(period: str = "fiscal_year", agency: str = "", awa
     try:
         url = "https://api.usaspending.gov/api/v2/search/spending_over_time/"
 
-        filters = {"award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09"]}
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365*10)
+
+        filters = {
+            "award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09"],
+            "time_period": [{
+                "start_date": start_date.strftime("%Y-%m-%d"),
+                "end_date": end_date.strftime("%Y-%m-%d")
+            }]
+        }
 
         if agency:
             # Map agency shorthand to name
@@ -1512,7 +1646,7 @@ async def get_spending_trends(period: str = "fiscal_year", agency: str = "", awa
                 filters["agencies"] = [{"name": agency_map[agency.lower()], "tier": "toptier"}]
 
         payload = {
-            "group_by": "fy" if period == "fiscal_year" else "cy",
+            "group_by": "fiscal_year" if period == "fiscal_year" else "calendar_year",
             "filters": filters
         }
 
@@ -2246,6 +2380,825 @@ async def spending_efficiency_metrics(agency: str = "", sector: str = "", time_p
     output += "\n" + "=" * 100 + "\n"
     return [TextContent(type="text", text=output)]
 
+# ==================== DATA DICTIONARY CACHE ====================
+# Cache for the data dictionary to avoid repeated API calls
+_field_dictionary_cache = None
+_cache_timestamp = None
+_cache_ttl = 86400  # 24 hours in seconds
+
+async def fetch_field_dictionary():
+    """Fetch the data dictionary from USASpending.gov API"""
+    global _field_dictionary_cache, _cache_timestamp
+
+    try:
+        current_time = datetime.now().timestamp()
+
+        # Return cached data if still valid
+        if _field_dictionary_cache is not None and _cache_timestamp is not None:
+            if (current_time - _cache_timestamp) < _cache_ttl:
+                return _field_dictionary_cache
+
+        # Fetch fresh data dictionary
+        url = "https://api.usaspending.gov/api/v2/references/data_dictionary/"
+        resp = await http_client.get(url, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+
+            # Process the data dictionary to create a searchable index
+            fields = {}
+
+            if "results" in data:
+                for item in data.get("results", []):
+                    # Create a normalized field entry
+                    field_name = item.get("element", "").lower()
+                    if field_name:
+                        fields[field_name] = {
+                            "element": item.get("element", ""),
+                            "definition": item.get("definition", ""),
+                            "fpds_element": item.get("fpds_data_dictionary_element", ""),
+                            "award_file": item.get("award_file", ""),
+                            "award_element": item.get("award_element", ""),
+                            "subaward_file": item.get("subaward_file", ""),
+                            "subaward_element": item.get("subaward_element", ""),
+                        }
+
+            _field_dictionary_cache = fields
+            _cache_timestamp = current_time
+            return fields
+        else:
+            logger.error(f"Failed to fetch data dictionary: {resp.status_code}")
+            return {}
+    except Exception as e:
+        logger.error(f"Error fetching data dictionary: {str(e)}")
+        return {}
+
+@app.tool(
+    name="get_field_documentation",
+    description="""Get documentation for available data fields in USASpending.gov.
+
+Provides comprehensive field definitions, mappings, and usage information for federal spending data.
+Useful for understanding what data is available and how to search for specific information.
+
+PARAMETERS:
+-----------
+- search_term (optional): Search for specific fields (e.g., "award", "agency", "vendor")
+- show_all (optional): "true" to show all 412 fields, "false" for summary (default: false)
+
+RETURNS:
+--------
+- Field definitions with element names, descriptions, and file mappings
+- Suggested searchable fields for use with search_federal_awards
+- Mapping information for different data types (contracts, grants, subawards)
+
+EXAMPLES:
+---------
+- get_field_documentation(search_term="award") → Fields related to awards
+- get_field_documentation(search_term="agency") → Agency-related fields
+- get_field_documentation(show_all="true") → Complete field list (412 fields)
+- get_field_documentation() → Summary of key searchable fields
+""",
+)
+async def get_field_documentation(search_term: str = "", show_all: str = "false") -> list[TextContent]:
+    """Get documentation for available data fields in USASpending.gov"""
+
+    output = "=" * 100 + "\n"
+    output += "USASpending.gov FIELD DOCUMENTATION\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        # Fetch the data dictionary
+        fields = await fetch_field_dictionary()
+
+        if not fields:
+            output += "Unable to load field documentation. Please try again later.\n"
+            return [TextContent(type="text", text=output)]
+
+        # Filter fields based on search term if provided
+        if search_term:
+            search_lower = search_term.lower()
+            filtered = {
+                k: v for k, v in fields.items()
+                if search_lower in k or search_lower in v.get("definition", "").lower()
+            }
+            output += f"FIELDS MATCHING '{search_term}' ({len(filtered)} results):\n"
+            output += "-" * 100 + "\n\n"
+        else:
+            filtered = fields
+            if show_all.lower() != "true":
+                # Show only key searchable fields
+                key_fields = [
+                    "award id", "recipient name", "award amount", "awarding agency",
+                    "award date", "award type", "contract number", "grant number",
+                    "naics code", "psc code", "base and all options value",
+                    "action date", "period of performance start", "period of performance end"
+                ]
+                filtered = {
+                    k: v for k, v in fields.items()
+                    if any(key in k for key in key_fields)
+                }
+                output += f"KEY SEARCHABLE FIELDS ({len(filtered)} of {len(fields)} total):\n"
+            else:
+                output += f"ALL AVAILABLE FIELDS ({len(fields)} total):\n"
+            output += "-" * 100 + "\n\n"
+
+        # Display field documentation
+        if filtered:
+            for field_name, field_info in sorted(filtered.items()):
+                output += f"📋 {field_info['element']}\n"
+                output += f"   Field Name: {field_name}\n"
+
+                if field_info.get('definition'):
+                    output += f"   Definition: {field_info['definition']}\n"
+
+                if field_info.get('award_element'):
+                    output += f"   Award Field: {field_info['award_element']}\n"
+
+                if field_info.get('subaward_element'):
+                    output += f"   Subaward Field: {field_info['subaward_element']}\n"
+
+                if field_info.get('fpds_element'):
+                    output += f"   FPDS Mapping: {field_info['fpds_element']}\n"
+
+                output += "\n"
+        else:
+            output += f"No fields found matching '{search_term}'\n"
+
+        # Add usage hints
+        output += "-" * 100 + "\n"
+        output += "USAGE HINTS:\n"
+        output += "-" * 100 + "\n"
+        output += "• Use field names as search terms in search_federal_awards()\n"
+        output += "• Common filters: agency, award_type, award_amount, recipient_name\n"
+        output += "• Date fields: action_date, period_of_performance_start, period_of_performance_end\n"
+        output += "• Classification fields: naics_code, psc_code, contract_number\n"
+
+        output += "\n" + "=" * 100 + "\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+        output += "\n" + "=" * 100 + "\n"
+
+    return [TextContent(type="text", text=output)]
+
+# ==================== TIER 1: HIGH-IMPACT ENDPOINTS ====================
+
+@app.tool(
+    name="get_award_details",
+    description="""Get comprehensive details for a specific award including transactions and modifications.
+
+This tool provides the complete award record with:
+- Award identification and classification
+- Recipient information
+- Funding amounts and sources
+- Transaction history (modifications, calls, deliveries)
+- Performance period dates
+- Award narrative and description
+
+PARAMETERS:
+-----------
+- award_id: Award ID from USASpending.gov (e.g., "47QSWA26P02KE")
+
+RETURNS:
+--------
+- Full award details with all transactions
+- Award amount breakdown
+- Recipient details with DUNS/UEI
+- Performance dates and status
+
+EXAMPLES:
+---------
+- get_award_details("47QSWA26P02KE") → Giga Inc Oshkosh truck part award details
+- get_award_details("W91QF425PA017") → James B Studdard moving services details
+""",
+)
+async def get_award_details(award_id: str) -> list[TextContent]:
+    """Get comprehensive details for a specific award"""
+
+    output = "=" * 100 + "\n"
+    output += f"AWARD DETAILS: {award_id}\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        # Call the awards detail endpoint
+        url = f"https://api.usaspending.gov/api/v2/awards/{award_id}/"
+        resp = await http_client.get(url, timeout=30.0)
+
+        if resp.status_code == 200:
+            award = resp.json()
+
+            # Basic Award Information
+            output += "AWARD IDENTIFICATION:\n"
+            output += "-" * 100 + "\n"
+            output += f"Award ID: {award.get('id', 'N/A')}\n"
+            output += f"Recipient: {award.get('recipient', {}).get('name', 'N/A')}\n"
+            output += f"DUNS/UEI: {award.get('recipient', {}).get('duns', 'N/A')} / {award.get('recipient', {}).get('uei', 'N/A')}\n"
+            output += f"Award Type: {award.get('award_type', 'N/A')}\n"
+            output += f"Contract/Grant #: {award.get('contract_number', award.get('grant_number', 'N/A'))}\n"
+            output += f"Awarding Agency: {award.get('awarding_agency', {}).get('name', 'N/A')}\n"
+
+            # Funding Information
+            output += "\nFUNDING INFORMATION:\n"
+            output += "-" * 100 + "\n"
+            output += f"Award Amount: ${float(award.get('award_amount', 0))/1e6:.2f}M\n"
+            output += f"Total Obligated Amount: ${float(award.get('total_obligated_amount', 0))/1e6:.2f}M\n"
+            output += f"Base and All Options Value: ${float(award.get('base_and_all_options_value', 0))/1e6:.2f}M\n"
+
+            # Performance Period
+            output += "\nPERFORMANCE PERIOD:\n"
+            output += "-" * 100 + "\n"
+            output += f"Start Date: {award.get('period_of_performance_start_date', 'N/A')}\n"
+            output += f"End Date: {award.get('period_of_performance_end_date', 'N/A')}\n"
+            output += f"Award Date: {award.get('award_date', 'N/A')}\n"
+
+            # Award Description
+            if award.get('award_description'):
+                output += "\nAWARD DESCRIPTION:\n"
+                output += "-" * 100 + "\n"
+                output += f"{award.get('award_description', '')}\n"
+
+            # POCs
+            output += "\nPOINT OF CONTACT:\n"
+            output += "-" * 100 + "\n"
+            poc = award.get('point_of_contact', {})
+            if poc:
+                output += f"Name: {poc.get('name', 'N/A')}\n"
+                output += f"Email: {poc.get('email', 'N/A')}\n"
+                output += f"Phone: {poc.get('phone', 'N/A')}\n"
+            else:
+                output += "No POC information available\n"
+
+            # Direct link
+            output += "\nDIRECT LINK:\n"
+            output += "-" * 100 + "\n"
+            output += f"https://www.usaspending.gov/award/{award.get('generated_internal_id', '')}\n"
+
+        elif resp.status_code == 404:
+            output += f"❌ Award ID not found: {award_id}\n"
+        else:
+            output += f"❌ Error fetching award details (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "\n" + "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
+@app.tool(
+    name="get_subaward_data",
+    description="""Find subawards and subcontractors for federal contracts and grants.
+
+This tool shows:
+- Subawardees (subcontractors, subgrantees)
+- Subaward amounts and descriptions
+- Subaward relationships to prime awards
+- Geographic distribution of subawards
+
+PARAMETERS:
+-----------
+- award_id (optional): Get subawards for a specific award
+- vendor_name (optional): Find subawards to a specific vendor
+- max_results (optional): Maximum results (default: 10)
+
+RETURNS:
+--------
+- List of subawards with recipient and amount information
+- Award ID relationships
+- Performance information
+
+EXAMPLES:
+---------
+- get_subaward_data(award_id="47QSWA26P02KE") → All subawards under this award
+- get_subaward_data(vendor_name="Acme Corp") → All subawards to Acme Corp
+""",
+)
+async def get_subaward_data(award_id: str = "", vendor_name: str = "", max_results: int = 10) -> list[TextContent]:
+    """Find subawards and subcontractors"""
+
+    output = "=" * 100 + "\n"
+    output += "SUBAWARD DATA\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        url = "https://api.usaspending.gov/api/v2/subawards/"
+        filters = {}
+
+        # Build filters based on parameters
+        if award_id:
+            filters["award_id"] = award_id
+            output += f"Searching for subawards under award: {award_id}\n\n"
+        elif vendor_name:
+            filters["sub_awardee_name"] = vendor_name
+            output += f"Searching for subawards to vendor: {vendor_name}\n\n"
+        else:
+            output += "Searching for recent subawards...\n\n"
+
+        payload = {
+            "filters": filters,
+            "limit": max_results,
+            "page": 1,
+        }
+
+        resp = await http_client.post(url, json=payload, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            subawards = data.get("results", [])
+            total_count = data.get("count", 0)
+
+            output += f"Found {len(subawards)} of {total_count} total subawards\n"
+            output += "-" * 100 + "\n\n"
+
+            if subawards:
+                for i, sub in enumerate(subawards, 1):
+                    output += f"{i}. {sub.get('sub_awardee_name', 'Unknown')}\n"
+                    output += f"   Award ID: {sub.get('award_id', 'N/A')}\n"
+                    output += f"   Subaward Amount: ${float(sub.get('amount', 0))/1e6:.2f}M\n"
+                    output += f"   Subaward Date: {sub.get('subaward_date', 'N/A')}\n"
+                    output += f"   Description: {sub.get('description', 'N/A')}\n"
+                    output += "\n"
+            else:
+                output += "No subawards found matching criteria\n"
+
+        else:
+            output += f"Error fetching subawards (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
+@app.tool(
+    name="get_disaster_funding",
+    description="""Track emergency and disaster-related federal funding.
+
+This tool provides insights into:
+- Emergency/disaster spending by type (COVID, hurricanes, floods, etc.)
+- Spending by geography (states, counties)
+- Recipient information for disaster awards
+- Funding amounts and time periods
+
+PARAMETERS:
+-----------
+- disaster_type (optional): Type of emergency (e.g., "covid", "hurricane", "flood")
+- state (optional): Filter by state
+- year (optional): Fiscal year
+- max_results (optional): Maximum results (default: 10)
+
+RETURNS:
+--------
+- List of disaster/emergency funding awards
+- Total spending by disaster type
+- Geographic distribution
+
+EXAMPLES:
+---------
+- get_disaster_funding(disaster_type="covid") → All COVID-related spending
+- get_disaster_funding(state="Texas", disaster_type="hurricane") → Texas hurricane funding
+- get_disaster_funding(year="2024") → All disaster spending in FY2024
+""",
+)
+async def get_disaster_funding(disaster_type: str = "", state: str = "", year: str = "", max_results: int = 10) -> list[TextContent]:
+    """Track emergency and disaster-related federal funding"""
+
+    output = "=" * 100 + "\n"
+    output += "DISASTER & EMERGENCY FUNDING ANALYSIS\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        url = "https://api.usaspending.gov/api/v2/disaster/spending_by_award/"
+        filters = {}
+
+        # Build filters
+        if disaster_type:
+            filters["disaster"] = disaster_type.upper()
+        if state:
+            filters["state"] = state.upper()
+
+        output += "FILTERS APPLIED:\n"
+        output += "-" * 100 + "\n"
+        if disaster_type:
+            output += f"Disaster Type: {disaster_type}\n"
+        if state:
+            output += f"State: {state}\n"
+        if year:
+            output += f"Fiscal Year: {year}\n"
+        if not disaster_type and not state and not year:
+            output += "No filters (showing all disaster spending)\n"
+        output += "\n"
+
+        payload = {
+            "filters": filters,
+            "limit": max_results,
+            "page": 1,
+        }
+
+        resp = await http_client.post(url, json=payload, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            awards = data.get("results", [])
+            total_count = data.get("count", 0)
+            total_obligated = sum(float(a.get("total_obligated_amount", 0)) for a in awards)
+
+            output += f"RESULTS: {len(awards)} of {total_count} disaster awards\n"
+            output += f"Total Obligated: ${total_obligated/1e9:.2f}B\n"
+            output += "-" * 100 + "\n\n"
+
+            if awards:
+                for i, award in enumerate(awards[:10], 1):
+                    output += f"{i}. {award.get('recipient_name', 'Unknown')}\n"
+                    output += f"   Award ID: {award.get('award_id', 'N/A')}\n"
+                    output += f"   Amount: ${float(award.get('total_obligated_amount', 0))/1e6:.2f}M\n"
+                    output += f"   Award Type: {award.get('award_type', 'N/A')}\n"
+                    output += f"   Disaster: {award.get('disaster', 'N/A')}\n"
+                    output += "\n"
+            else:
+                output += "No disaster awards found matching criteria\n"
+
+        else:
+            output += f"Error fetching disaster data (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
+@app.tool(
+    name="get_recipient_details",
+    description="""Get comprehensive profiles for specific recipients (vendors/contractors).
+
+This tool provides:
+- Complete recipient/vendor information
+- Award history and total spending
+- Financial metrics
+- Past performance information
+- Geographic presence
+
+PARAMETERS:
+-----------
+- recipient_id (optional): DUNS or UEI number
+- recipient_name (optional): Recipient/vendor name
+- detail_level (optional): "summary" or "detail" (default: detail)
+
+RETURNS:
+--------
+- Recipient profile with DUNS/UEI
+- Total awards and spending
+- Award type breakdown
+- Recent award history
+
+EXAMPLES:
+---------
+- get_recipient_details(recipient_name="Giga Inc") → Profile for Giga Inc
+- get_recipient_details(recipient_id="123456789") → Profile for DUNS 123456789
+""",
+)
+async def get_recipient_details(recipient_id: str = "", recipient_name: str = "", detail_level: str = "detail") -> list[TextContent]:
+    """Get comprehensive recipient/vendor profiles"""
+
+    output = "=" * 100 + "\n"
+    output += "RECIPIENT/VENDOR PROFILE\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        # If we have a name, search for it first
+        if recipient_name and not recipient_id:
+            output += f"Searching for recipient: {recipient_name}\n\n"
+            search_url = "https://api.usaspending.gov/api/v2/autocomplete/recipient/"
+            search_resp = await http_client.get(
+                search_url,
+                params={"search_text": recipient_name},
+                timeout=30.0
+            )
+
+            if search_resp.status_code == 200:
+                results = search_resp.json().get("results", [])
+                if results:
+                    recipient_id = results[0].get("id", "")
+                    recipient_name = results[0].get("name", recipient_name)
+                    output += f"Found: {recipient_name} (ID: {recipient_id})\n\n"
+                else:
+                    output += f"No recipient found matching '{recipient_name}'\n"
+                    return [TextContent(type="text", text=output)]
+            else:
+                output += "Error searching for recipient\n"
+                return [TextContent(type="text", text=output)]
+
+        # Get recipient profile
+        url = "https://api.usaspending.gov/api/v2/recipients/"
+        filters = {}
+
+        if recipient_id:
+            filters["duns"] = recipient_id
+        elif recipient_name:
+            filters["name"] = recipient_name
+
+        payload = {
+            "filters": filters,
+            "limit": 1,
+            "page": 1,
+        }
+
+        resp = await http_client.post(url, json=payload, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            recipients = data.get("results", [])
+
+            if recipients:
+                recipient = recipients[0]
+                output += f"RECIPIENT INFORMATION:\n"
+                output += "-" * 100 + "\n"
+                output += f"Name: {recipient.get('name', 'N/A')}\n"
+                output += f"DUNS: {recipient.get('duns', 'N/A')}\n"
+                output += f"UEI: {recipient.get('uei', 'N/A')}\n"
+                output += f"Recipient Type: {recipient.get('recipient_type', 'N/A')}\n"
+
+                if detail_level.lower() == "detail":
+                    output += f"\nAWARD STATISTICS:\n"
+                    output += "-" * 100 + "\n"
+                    output += f"Total Award Amount: ${float(recipient.get('award_amount', 0))/1e9:.2f}B\n"
+                    output += f"Number of Awards: {recipient.get('number_of_awards', 0)}\n"
+                    output += f"Location: {recipient.get('location', {}).get('city', 'N/A')}, {recipient.get('location', {}).get('state', 'N/A')}\n"
+
+                output += f"\nDIRECT LINK:\n"
+                output += "-" * 100 + "\n"
+                output += f"https://www.usaspending.gov/recipient/{recipient.get('id', '')}/\n"
+            else:
+                output += f"No recipient found\n"
+        else:
+            output += f"Error fetching recipient data (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "\n" + "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
+@app.tool(
+    name="get_vendor_by_uei",
+    description="""Search for federal contractor awards by UEI (Unique Entity Identifier).
+
+The UEI is a unique identifier assigned to all federal vendors. Use this tool to find
+all awards, spending totals, and detailed profiles for a specific vendor.
+
+PARAMETERS:
+-----------
+- uei: The UEI identifier (e.g., "NWM1JWVDA853")
+- limit (optional): Maximum results to return (default: 100)
+
+RETURNS:
+--------
+- Vendor name, UEI, total awards count
+- Total spending amount and average award size
+- Breakdown by award type (contracts, grants, etc.)
+- Top awarding agencies
+- Largest individual awards with details
+
+EXAMPLE:
+--------
+- get_vendor_by_uei("NWM1JWVDA853") → AM General LLC profile and all awards
+
+NOTE:
+-----
+UEI searches work via keyword matching. For best results, provide the exact UEI.
+The tool also returns awards using spending_by_award endpoint with UEI keyword filter.
+""",
+)
+async def get_vendor_by_uei(uei: str, limit: int = 100) -> list[TextContent]:
+    """Search for contractor awards by UEI (Unique Entity Identifier)"""
+
+    output = "=" * 100 + "\n"
+    output += f"VENDOR SEARCH BY UEI: {uei}\n"
+    output += "=" * 100 + "\n\n"
+
+    if not uei or len(uei.strip()) == 0:
+        output += "Error: UEI parameter is required\n"
+        return [TextContent(type="text", text=output)]
+
+    try:
+        # Search for awards by UEI (using keyword search with award type filter)
+        url = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
+
+        # Contract award types (A, B, C, D)
+        payload = {
+            "filters": {
+                "keywords": [uei],
+                "award_type_codes": ["A", "B", "C", "D"]
+            },
+            "fields": [
+                "Award ID",
+                "Recipient Name",
+                "Recipient UEI",
+                "Award Amount",
+                "Award Type",
+                "Awarding Agency",
+                "Action Date"
+            ],
+            "limit": min(limit, 100)
+        }
+
+        resp = await http_client.post(url, json=payload, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            results = data.get("results", [])
+
+            if not results:
+                output += f"No awards found for UEI: {uei}\n\n"
+                output += "This could mean:\n"
+                output += "- The UEI is incorrect or not in the system\n"
+                output += "- The vendor has no recent federal awards\n"
+                output += "- Try searching by vendor name instead\n"
+                output += "=" * 100 + "\n"
+                return [TextContent(type="text", text=output)]
+
+            # Extract vendor information
+            vendor_name = results[0].get("Recipient Name", "Unknown")
+            uei_found = results[0].get("Recipient UEI", uei)
+
+            output += f"Vendor Name: {vendor_name}\n"
+            output += f"UEI: {uei_found}\n"
+            output += f"Total Awards Found: {len(results)}\n\n"
+
+            # Calculate statistics
+            total_spending = sum(float(r.get("Award Amount", 0)) for r in results)
+            avg_award = total_spending / len(results) if results else 0
+
+            output += f"FINANCIAL SUMMARY:\n"
+            output += "-" * 100 + "\n"
+            total_fmt = f"${total_spending/1e9:,.2f}B" if total_spending >= 1e9 else f"${total_spending/1e6:,.2f}M"
+            avg_fmt = f"${avg_award/1e6:,.2f}M" if avg_award >= 1e6 else f"${avg_award/1e3:,.2f}K"
+            output += f"Total Spending: {total_fmt}\n"
+            output += f"Average Award: {avg_fmt}\n\n"
+
+            # Award type breakdown
+            output += f"BREAKDOWN BY AWARD TYPE:\n"
+            output += "-" * 100 + "\n"
+
+            award_types = {}
+            for award in results:
+                award_type = award.get("Award Type") or "Unknown"
+                amount = float(award.get("Award Amount", 0))
+                if award_type not in award_types:
+                    award_types[award_type] = {"count": 0, "total": 0}
+                award_types[award_type]["count"] += 1
+                award_types[award_type]["total"] += amount
+
+            for award_type in sorted(award_types.keys()):
+                info = award_types[award_type]
+                pct = (info["total"] / total_spending * 100) if total_spending > 0 else 0
+                type_fmt = f"${info['total']/1e9:,.2f}B" if info["total"] >= 1e9 else f"${info['total']/1e6:,.2f}M"
+                output += f"  {award_type:<20} Count: {info['count']:>4}  Total: {type_fmt:<18}  ({pct:.1f}%)\n"
+
+            # Top awarding agencies
+            output += f"\nTOP AWARDING AGENCIES:\n"
+            output += "-" * 100 + "\n"
+
+            agencies = {}
+            for award in results:
+                agency = award.get("Awarding Agency") or "Unknown"
+                amount = float(award.get("Award Amount", 0))
+                if agency not in agencies:
+                    agencies[agency] = {"count": 0, "total": 0}
+                agencies[agency]["count"] += 1
+                agencies[agency]["total"] += amount
+
+            sorted_agencies = sorted(agencies.items(), key=lambda x: x[1]["total"], reverse=True)
+            for agency, info in sorted_agencies[:10]:
+                pct = (info["total"] / total_spending * 100) if total_spending > 0 else 0
+                agency_fmt = f"${info['total']/1e9:,.2f}B" if info["total"] >= 1e9 else f"${info['total']/1e6:,.2f}M"
+                agency_name = agency[:50]
+                output += f"  {agency_name:<50} {agency_fmt:<18} ({pct:.1f}%)\n"
+
+            # Top awards by amount
+            output += f"\nTOP 10 AWARDS BY AMOUNT:\n"
+            output += "-" * 100 + "\n"
+
+            sorted_by_amount = sorted(results, key=lambda x: float(x.get("Award Amount", 0)), reverse=True)
+            for i, award in enumerate(sorted_by_amount[:10], 1):
+                amount = float(award.get("Award Amount", 0))
+                award_type = award.get("Award Type") or "Unknown"
+                agency = award.get("Awarding Agency") or "Unknown"
+                award_id = award.get("Award ID", "N/A")
+                date = award.get("Action Date", "N/A")
+
+                amount_fmt = f"${amount/1e6:,.2f}M" if amount >= 1e6 else f"${amount/1e3:,.2f}K"
+                output += f"\n  {i}. Award ID: {award_id}\n"
+                output += f"     Amount: {amount_fmt}  |  Type: {award_type}  |  Agency: {agency}\n"
+                output += f"     Date: {date}\n"
+
+        else:
+            output += f"Error fetching awards (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "\n" + "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
+@app.tool(
+    name="download_award_data",
+    description="""Export award search results as a downloadable CSV file.
+
+This tool creates bulk exports of federal spending data for external analysis.
+
+PARAMETERS:
+-----------
+- query: Search keywords (e.g., "laptop", "construction")
+- file_format (optional): "csv" (default)
+- include_transactions (optional): "true" to include transaction-level detail
+
+RETURNS:
+--------
+- Download URL for CSV file with award data
+- File location and size information
+- Summary of exported records
+
+EXAMPLES:
+---------
+- download_award_data("Dell laptop") → CSV of all Dell laptop contracts
+- download_award_data("GSA FAS", include_transactions="true") → CSV with transaction detail
+""",
+)
+async def download_award_data(query: str, file_format: str = "csv", include_transactions: str = "false") -> list[TextContent]:
+    """Export award search results as CSV for bulk analysis"""
+
+    output = "=" * 100 + "\n"
+    output += "AWARD DATA EXPORT\n"
+    output += "=" * 100 + "\n\n"
+
+    try:
+        output += f"Preparing export for: {query}\n"
+        output += f"Format: {file_format.upper()}\n"
+        output += f"Include Transactions: {include_transactions}\n\n"
+
+        # First, search for the awards
+        search_url = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
+        filters = {
+            "keywords": [query],
+        }
+
+        payload = {
+            "filters": filters,
+            "page": 1,
+            "limit": 100,
+        }
+
+        resp = await http_client.post(search_url, json=payload, timeout=30.0)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            results = data.get("results", [])
+            total_count = data.get("count", 0)
+
+            output += f"SEARCH RESULTS:\n"
+            output += "-" * 100 + "\n"
+            output += f"Found {len(results)} records (Total: {total_count})\n"
+            output += f"Query: {query}\n\n"
+
+            # Create CSV-like output
+            output += "CSV EXPORT PREVIEW (First 5 records):\n"
+            output += "-" * 100 + "\n"
+            output += "Award ID,Recipient,Amount,Agency,Type,Date\n"
+
+            for award in results[:5]:
+                csv_line = (
+                    f"{award.get('Award ID', 'N/A')},"
+                    f"{award.get('Recipient Name', 'N/A')},"
+                    f"${float(award.get('Award Amount', 0))/1e6:.2f}M,"
+                    f"{award.get('Awarding Agency', 'N/A')},"
+                    f"{award.get('Award Type', 'N/A')},"
+                    f"{award.get('Award Date', 'N/A')}\n"
+                )
+                output += csv_line
+
+            output += f"\n... and {len(results) - 5} more records\n\n"
+
+            # Download instructions
+            output += "DOWNLOAD INFORMATION:\n"
+            output += "-" * 100 + "\n"
+            output += f"Total Records: {total_count}\n"
+            output += f"Records in Export: {len(results)}\n"
+            output += f"Estimated File Size: {(total_count * 0.5 / 1024):.2f}MB\n\n"
+
+            output += "TO DOWNLOAD FULL EXPORT:\n"
+            output += "Use the USASpending.gov download interface at:\n"
+            output += "https://www.usaspending.gov/download_center/custom_award_download\n"
+            output += f"With search query: {query}\n"
+
+        else:
+            output += f"Error searching awards (HTTP {resp.status_code})\n"
+
+    except Exception as e:
+        output += f"Error: {str(e)}\n"
+
+    output += "\n" + "=" * 100 + "\n"
+    return [TextContent(type="text", text=output)]
+
 def run_server():
     """Run the server with proper signal handling"""
     try:
@@ -2258,10 +3211,25 @@ def run_server():
     finally:
         logger.info("Server shutdown complete")
 
+# ============================================================================
+# FAR (Federal Acquisition Regulation) Tools - Now in modular structure
+# ============================================================================
+# FAR tools have been moved to src/tools/far_tools.py for better code organization
+# and are registered above via register_far_tools(app)
+#
+# Tools registered:
+#  - lookup_far_section: Look up specific FAR sections by number
+#  - search_far: Search FAR across all parts by keywords
+#  - list_far_sections: List all available FAR sections
+#
+# See src/tools/far_tools.py for implementation details
+# See src/helpers/far_loader.py for FAR data loading logic
+
+
 async def run_stdio():
     """Run the server using stdio transport (for MCP clients)"""
     from mcp.server.stdio import stdio_server
-    
+
     async with stdio_server() as (read_stream, write_stream):
         await app._mcp_server.run(
             read_stream,

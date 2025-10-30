@@ -1,0 +1,840 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-10-30",
+  "description": "Comprehensive catalog of MCP tools available in the USASpending server with FAR regulatory tools",
+  "server_info": {
+    "name": "USASpending MCP Server with Multi-Part FAR Tools",
+    "version": "2.2.0",
+    "base_url": "https://api.usaspending.gov/api/v2",
+    "total_tools": 25,
+    "note": "FAR tools now support Parts 14, 15, 16, and 19 (updated from Part 15 only). Supports cross-part searches and lookups."
+  },
+  "tools": {
+    "search_federal_awards": {
+      "name": "search_federal_awards",
+      "category": "search",
+      "priority": "high",
+      "description": "Search federal spending data from USASpending.gov to find contracts, grants, loans, and other federal awards",
+      "usaspending_endpoint": "/search/spending_by_award/",
+      "http_method": "POST",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "description": "Search query with advanced syntax. Can include keywords, agencies, dates, amounts",
+          "examples": [
+            "software development",
+            "NASA contracts",
+            "healthcare grants 2024"
+          ]
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 5,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of results to return"
+        },
+        "output_format": {
+          "type": "string",
+          "required": false,
+          "default": "text",
+          "enum": ["text", "csv"],
+          "description": "Output format for results"
+        },
+        "start_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD",
+          "description": "Search start date (defaults to 180 days ago)"
+        },
+        "end_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD",
+          "description": "Search end date (defaults to today)"
+        }
+      },
+      "response_fields": [
+        "Award ID",
+        "Recipient Name",
+        "Award Amount",
+        "Award Type",
+        "Description",
+        "Agency",
+        "Award Date"
+      ],
+      "response_example": {
+        "Found": 29296,
+        "Results": [
+          {
+            "Award ID": "W91ZRU25FA004",
+            "Recipient Name": "DELL FEDERAL SYSTEMS L.P",
+            "Amount": "$20.96K",
+            "Type": "Contract",
+            "Description": "DELL PRO 16 PLUS NOTEBOOKS"
+          }
+        ]
+      },
+      "known_issues": [
+        "Keyword search may return broad results",
+        "Masked Award IDs (ZZ71, ZZZZ) indicate test/incomplete data",
+        "Results limited to past 6 years"
+      ],
+      "workarounds": [
+        "Use specific keywords combined with date ranges",
+        "Filter by agency for more targeted results",
+        "Use exact Award ID for precise lookups"
+      ],
+      "performance": {
+        "typical_response_time_ms": "150-500",
+        "average_latency": "300ms"
+      }
+    },
+    "get_award_by_id": {
+      "name": "get_award_by_id",
+      "category": "award_lookup",
+      "priority": "high",
+      "description": "Get a specific federal award by its exact Award ID",
+      "usaspending_endpoint": "/search/spending_by_award/",
+      "http_method": "POST",
+      "parameters": {
+        "award_id": {
+          "type": "string",
+          "required": true,
+          "description": "The Award ID (e.g., 47QSWA26P02KE, W91QF425PA017)",
+          "examples": [
+            "47QSWA26P02KE",
+            "W91QF425PA017"
+          ]
+        }
+      },
+      "response_fields": [
+        "Award ID",
+        "Recipient Name",
+        "Award Amount",
+        "Award Type",
+        "Description",
+        "Details URL"
+      ],
+      "known_issues": [
+        "Some award IDs are masked in recent data",
+        "Award may be older than 2020"
+      ],
+      "performance": {
+        "typical_response_time_ms": "100-300"
+      }
+    },
+    "get_spending_trends": {
+      "name": "get_spending_trends",
+      "category": "analytics",
+      "priority": "high",
+      "description": "Analyze federal spending trends over time by fiscal year, calendar year, month, or quarter",
+      "usaspending_endpoint": "/search/spending_over_time/",
+      "http_method": "POST",
+      "parameters": {
+        "period": {
+          "type": "string",
+          "required": false,
+          "default": "fiscal_year",
+          "enum": ["fiscal_year", "calendar_year", "month", "quarter"],
+          "description": "Time period grouping"
+        },
+        "agency": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Filter by agency (e.g., 'dod', 'gsa', 'hhs', 'va', 'dhs')",
+          "examples": ["dod", "defense", "gsa"]
+        },
+        "award_type": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": ["A", "B", "C", "D"],
+          "description": "Filter by award type code"
+        }
+      },
+      "api_payload_template": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "YYYY-MM-DD",
+              "end_date": "YYYY-MM-DD"
+            }
+          ],
+          "agencies": ["Optional: agency name"]
+        },
+        "group": "fiscal_year|calendar_year|month|quarter"
+      },
+      "response_fields": [
+        "time_period",
+        "aggregated_amount",
+        "Contract_Obligations",
+        "Direct_Obligations",
+        "Grant_Obligations",
+        "Idv_Obligations",
+        "Loan_Obligations",
+        "Other_Obligations"
+      ],
+      "response_example": {
+        "FY2024": {
+          "total": "$4,944.60B",
+          "breakdown": {
+            "Contracts": "$740.22B",
+            "Direct": "$2,941.93B",
+            "Grants": "$1,209.75B"
+          }
+        }
+      },
+      "known_issues": [
+        "Field names in API response use underscores (total_spending), not camelCase",
+        "Required parameter is 'group' not 'group_by'"
+      ],
+      "workarounds": [
+        "Use 'group' parameter instead of 'group_by'",
+        "Access response fields as: total_spending, award_count, period"
+      ],
+      "performance": {
+        "typical_response_time_ms": "300-1000"
+      }
+    },
+    "get_spending_by_state": {
+      "name": "get_spending_by_state",
+      "category": "analytics",
+      "priority": "medium",
+      "description": "Get federal spending breakdown by state",
+      "usaspending_endpoint": "/search/spending_by_geography/",
+      "http_method": "POST",
+      "parameters": {
+        "state": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "State abbreviation or full name (empty = all states)"
+        },
+        "top_n": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "description": "Number of top states to return"
+        }
+      },
+      "api_payload_template": {
+        "filters": {},
+        "scope": "place_of_performance",
+        "geo_layer": "state"
+      },
+      "response_fields": [
+        "state_name",
+        "aggregated_amount",
+        "display_name",
+        "per_capita"
+      ],
+      "performance": {
+        "typical_response_time_ms": "200-800"
+      }
+    },
+    "get_top_naics_breakdown": {
+      "name": "get_top_naics_breakdown",
+      "category": "classification",
+      "priority": "medium",
+      "description": "Get top NAICS (industry classification) codes by spending",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "parameters": {
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "default": 20,
+          "description": "Top N NAICS codes to return"
+        }
+      },
+      "api_payload_template": {
+        "category": "naics",
+        "filters": {}
+      },
+      "response_fields": [
+        "code",
+        "name",
+        "amount",
+        "percentage"
+      ],
+      "performance": {
+        "typical_response_time_ms": "200-600"
+      }
+    },
+    "get_naics_psc_info": {
+      "name": "get_naics_psc_info",
+      "category": "classification",
+      "priority": "medium",
+      "description": "Look up NAICS or PSC (Product Service Code) details",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "parameters": {
+        "search_term": {
+          "type": "string",
+          "required": true,
+          "description": "Code or description to search (e.g., 'vehicle', '2510', '7030')",
+          "examples": ["vehicle", "2510", "software", "construction"]
+        },
+        "code_type": {
+          "type": "string",
+          "required": false,
+          "default": "both",
+          "enum": ["naics", "psc", "both"],
+          "description": "Type of codes to search"
+        }
+      },
+      "common_codes": {
+        "PSC": {
+          "2510": "Motor vehicles (passenger automobiles)",
+          "2515": "Motor vehicles (trucks, buses)",
+          "7030": "IT Software Development",
+          "7050": "IT Integration Services"
+        },
+        "NAICS": {
+          "334111": "Electronic Computers Manufacturing",
+          "541511": "Custom Computer Programming Services",
+          "541512": "Computer Systems Design Services"
+        }
+      },
+      "performance": {
+        "typical_response_time_ms": "150-400"
+      }
+    },
+    "get_budget_functions": {
+      "name": "get_budget_functions",
+      "category": "analytics",
+      "priority": "medium",
+      "description": "Analyze federal spending by budget function (what money is spent on)",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "parameters": {
+        "agency": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Filter by agency"
+        },
+        "detailed": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "enum": ["true", "false"],
+          "description": "Detailed breakdown (true/false)"
+        }
+      },
+      "response_fields": [
+        "function_code",
+        "function_name",
+        "amount",
+        "percentage"
+      ],
+      "performance": {
+        "typical_response_time_ms": "200-700"
+      }
+    },
+    "get_vendor_profile": {
+      "name": "get_vendor_profile",
+      "category": "vendor_intelligence",
+      "priority": "medium",
+      "description": "Get detailed profile information about a federal contractor",
+      "usaspending_endpoint": "/recipients/",
+      "http_method": "GET",
+      "parameters": {
+        "vendor_name": {
+          "type": "string",
+          "required": true,
+          "description": "Company name (e.g., 'IBM CORPORATION', 'LOCKHEED MARTIN')",
+          "examples": ["IBM CORPORATION", "LOCKHEED MARTIN"]
+        },
+        "show_contracts": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "enum": ["true", "false"],
+          "description": "Include list of contracts"
+        }
+      },
+      "response_fields": [
+        "vendor_name",
+        "duns_number",
+        "total_spending",
+        "award_count",
+        "award_type_breakdown",
+        "top_agency"
+      ],
+      "performance": {
+        "typical_response_time_ms": "50-200"
+      }
+    },
+    "get_agency_profile": {
+      "name": "get_agency_profile",
+      "category": "agency_intelligence",
+      "priority": "medium",
+      "description": "Get spending and award information for a specific federal agency",
+      "usaspending_endpoint": "/agencies/",
+      "http_method": "GET",
+      "parameters": {
+        "agency": {
+          "type": "string",
+          "required": true,
+          "description": "Agency name or code (e.g., 'defense', 'gsa', 'hhs')",
+          "examples": ["Department of Defense", "gsa", "hhs"]
+        },
+        "detail_level": {
+          "type": "string",
+          "required": false,
+          "default": "detail",
+          "enum": ["summary", "detail"],
+          "description": "Level of detail to return"
+        }
+      },
+      "response_fields": [
+        "agency_name",
+        "agency_code",
+        "total_budget",
+        "total_spending",
+        "active_awards",
+        "top_contractors"
+      ],
+      "performance": {
+        "typical_response_time_ms": "100-400"
+      }
+    },
+    "get_recipient_details": {
+      "name": "get_recipient_details",
+      "category": "vendor_intelligence",
+      "priority": "medium",
+      "description": "Get detailed information about an award recipient (contractor or grantee)",
+      "usaspending_endpoint": "/recipients/",
+      "http_method": "GET",
+      "parameters": {
+        "recipient_id": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "DUNS or recipient ID"
+        },
+        "recipient_name": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Full legal name"
+        },
+        "detail_level": {
+          "type": "string",
+          "required": false,
+          "default": "detail",
+          "enum": ["summary", "detail"],
+          "description": "Detail level"
+        }
+      },
+      "note": "Either recipient_id or recipient_name must be provided",
+      "response_fields": [
+        "recipient_name",
+        "duns_number",
+        "total_awards",
+        "total_spending",
+        "award_breakdown",
+        "geographic_presence"
+      ],
+      "performance": {
+        "typical_response_time_ms": "80-300"
+      }
+    },
+    "get_vendor_by_uei": {
+      "name": "get_vendor_by_uei",
+      "category": "vendor_intelligence",
+      "priority": "high",
+      "description": "Search for federal contractor awards by UEI (Unique Entity Identifier)",
+      "usaspending_endpoint": "/search/spending_by_award/",
+      "http_method": "POST",
+      "parameters": {
+        "uei": {
+          "type": "string",
+          "required": true,
+          "description": "Unique Entity Identifier (e.g., NWM1JWVDA853)",
+          "format": "13-character alphanumeric code",
+          "examples": ["NWM1JWVDA853", "G2NLP3NLX5Q7"]
+        },
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "default": 100,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum awards to return"
+        }
+      },
+      "response_fields": [
+        "vendor_name",
+        "uei",
+        "total_awards_count",
+        "total_spending",
+        "average_award_amount",
+        "breakdown_by_award_type",
+        "top_awarding_agencies",
+        "top_10_awards_details"
+      ],
+      "what_is_uei": "The Unique Entity Identifier is a standardized identifier assigned to all federal contractors and grantees. Every federal vendor has a unique UEI.",
+      "use_cases": [
+        "Find all awards for a specific contractor",
+        "Analyze contractor spending and portfolio",
+        "Understand which agencies use a specific vendor",
+        "Track contractor growth or decline",
+        "Identify largest contracts for a vendor"
+      ],
+      "example_query": {
+        "uei": "NWM1JWVDA853",
+        "description": "Returns AM General LLC profile with 100+ awards totaling $4.5B in DoD contracts"
+      },
+      "performance": {
+        "typical_response_time_ms": "150-500",
+        "typical_results": "10-100+ awards"
+      },
+      "note": "UEI searches work by keyword matching. Provide the exact 13-character UEI code for best results."
+    },
+    "get_subaward_data": {
+      "name": "get_subaward_data",
+      "category": "award_details",
+      "priority": "medium",
+      "description": "Get information about subawards (subcontracts)",
+      "usaspending_endpoint": "/subawards/",
+      "http_method": "GET",
+      "parameters": {
+        "award_id": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Parent award ID"
+        },
+        "vendor_name": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Subcontractor name"
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "description": "Maximum results to return"
+        }
+      },
+      "note": "Limited availability - not all awards include subaward data",
+      "response_fields": [
+        "subaward_amount",
+        "parent_award_id",
+        "prime_contractor",
+        "subcontractor_name",
+        "award_date"
+      ],
+      "performance": {
+        "typical_response_time_ms": "100-400"
+      }
+    },
+    "get_disaster_funding": {
+      "name": "get_disaster_funding",
+      "category": "special_funding",
+      "priority": "medium",
+      "description": "Query emergency and disaster-related federal spending",
+      "usaspending_endpoint": "/disaster/spending_by_award/",
+      "http_method": "POST",
+      "parameters": {
+        "disaster_type": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Disaster type (e.g., 'hurricane', 'flood', 'pandemic')",
+          "examples": ["hurricane", "flood", "pandemic", "tornado"]
+        },
+        "state": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "State abbreviation"
+        },
+        "year": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Fiscal year"
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "description": "Maximum results"
+        }
+      },
+      "response_fields": [
+        "disaster_type",
+        "state",
+        "amount",
+        "recipient",
+        "award_date"
+      ],
+      "performance": {
+        "typical_response_time_ms": "200-700"
+      }
+    },
+    "get_award_details": {
+      "name": "get_award_details",
+      "category": "award_lookup",
+      "priority": "high",
+      "description": "Get detailed information about a specific award",
+      "usaspending_endpoint": "/awards/{award_id}/",
+      "http_method": "GET",
+      "parameters": {
+        "award_id": {
+          "type": "string",
+          "required": true,
+          "description": "Award ID"
+        }
+      },
+      "response_fields": [
+        "award_id",
+        "recipient_name",
+        "award_amount",
+        "agency",
+        "description",
+        "performance_location",
+        "award_date",
+        "award_type"
+      ],
+      "performance": {
+        "typical_response_time_ms": "45-150"
+      }
+    },
+    "get_object_class_analysis": {
+      "name": "get_object_class_analysis",
+      "category": "analytics",
+      "priority": "low",
+      "description": "Analyze spending by Object Class (budget classification)",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "parameters": {
+        "agency": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Filter by agency"
+        },
+        "fiscal_year": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Specific fiscal year"
+        }
+      },
+      "response_fields": [
+        "object_class_code",
+        "object_class_name",
+        "amount",
+        "percentage"
+      ]
+    },
+    "analyze_federal_spending": {
+      "name": "analyze_federal_spending",
+      "category": "analytics",
+      "priority": "low",
+      "description": "Perform comprehensive federal spending analysis"
+    },
+    "compare_states": {
+      "name": "compare_states",
+      "category": "analytics",
+      "priority": "low",
+      "description": "Compare federal spending across states"
+    },
+    "analyze_small_business": {
+      "name": "analyze_small_business",
+      "category": "vendor_intelligence",
+      "priority": "low",
+      "description": "Analyze federal spending with small businesses"
+    },
+    "emergency_spending_tracker": {
+      "name": "emergency_spending_tracker",
+      "category": "special_funding",
+      "priority": "medium",
+      "description": "Track emergency and disaster-related federal spending",
+      "usaspending_endpoint": "/disaster/spending_by_award/"
+    },
+    "spending_efficiency_metrics": {
+      "name": "spending_efficiency_metrics",
+      "category": "analytics",
+      "priority": "low",
+      "description": "Calculate spending efficiency metrics"
+    },
+    "get_field_documentation": {
+      "name": "get_field_documentation",
+      "category": "reference",
+      "priority": "low",
+      "description": "Get documentation about available data fields"
+    },
+    "download_award_data": {
+      "name": "download_award_data",
+      "category": "export",
+      "priority": "medium",
+      "description": "Download federal award data in various formats",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "description": "Search query"
+        },
+        "file_format": {
+          "type": "string",
+          "required": false,
+          "default": "csv",
+          "enum": ["csv", "json", "xlsx"],
+          "description": "Output file format"
+        },
+        "include_transactions": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "enum": ["true", "false"],
+          "description": "Include transaction-level data"
+        }
+      }
+    },
+    "lookup_far_section": {
+      "name": "lookup_far_section",
+      "category": "regulatory",
+      "priority": "high",
+      "description": "Look up a specific FAR (Federal Acquisition Regulation) section by number from Parts 14, 15, 16, or 19",
+      "data_source": "docs/far_part14.json, docs/far_part15.json, docs/far_part16.json, docs/far_part19.json",
+      "supported_parts": {
+        "14": "Sealed Bidding (35 sections)",
+        "15": "Contracting by Negotiation (54 sections)",
+        "16": "Types of Contracts (41 sections)",
+        "19": "Small Business Programs (80 sections)"
+      },
+      "target_users": "Procurement professionals, contract managers, government agencies",
+      "parameters": {
+        "section_number": {
+          "type": "string",
+          "required": true,
+          "description": "FAR section number (auto-detects part from prefix)",
+          "examples": ["14.305", "15.404", "16.201", "19.305"]
+        }
+      },
+      "returns": {
+        "section_title": "string",
+        "section_content": "string (up to 2000 characters)",
+        "part_number": "integer (14, 15, 16, or 19)",
+        "related_sections": "list of related section numbers from same part"
+      },
+      "note": "Section number prefix automatically determines which part is searched (e.g., 16.201 looks in Part 16)"
+    },
+    "search_far": {
+      "name": "search_far",
+      "category": "regulatory",
+      "priority": "high",
+      "description": "Search FAR Parts 14, 15, 16, and 19 by keywords or topics with relevance scoring across all parts",
+      "data_source": "docs/far_part14.json, docs/far_part15.json, docs/far_part16.json, docs/far_part19.json",
+      "search_scope": "Cross-part search spanning all 4 parts (210 total sections)",
+      "target_users": "Procurement professionals, contract managers, government agencies",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "description": "Search keywords applicable across all FAR parts",
+          "examples": [
+            "proposal evaluation (Part 15)",
+            "small business (Part 19)",
+            "cost reimbursement (Part 16)",
+            "sealed bidding (Part 14)"
+          ]
+        }
+      },
+      "returns": {
+        "matching_sections": "list of FAR sections from all parts matching search query",
+        "part_designation": "which part each result comes from",
+        "relevance_score": "0-11 (title matches weighted 10x higher than content)",
+        "top_match_details": "full content excerpt from highest-scoring section with part info"
+      },
+      "note": "Searches across all available parts simultaneously. Results organized by relevance score, then section number."
+    },
+    "list_far_sections": {
+      "name": "list_far_sections",
+      "category": "regulatory",
+      "priority": "medium",
+      "description": "List all available FAR sections from Parts 14, 15, 16, and 19 organized by part and subpart",
+      "data_source": "docs/far_part14.json, docs/far_part15.json, docs/far_part16.json, docs/far_part19.json",
+      "target_users": "Procurement professionals, contract managers, government agencies",
+      "parameters": {},
+      "returns": {
+        "total_sections": "210 (35 + 54 + 41 + 80)",
+        "sections_by_part": {
+          "part14": "35 sections (Sealed Bidding)",
+          "part15": "54 sections (Contracting by Negotiation)",
+          "part16": "41 sections (Types of Contracts)",
+          "part19": "80 sections (Small Business Programs)"
+        },
+        "sections_by_subpart": "organized list of all FAR sections grouped by part and subpart"
+      },
+      "note": "Provides comprehensive index of all 210 sections across 4 FAR parts with descriptions and subpart organization"
+    }
+  },
+  "api_limits": {
+    "max_results_per_query": 100,
+    "max_concurrent_requests": 10,
+    "request_timeout_seconds": 30,
+    "rate_limit": "Approximate based on IP",
+    "min_spacing_between_requests_ms": 100
+  },
+  "common_filters": {
+    "award_type_codes": {
+      "A": "BPA/Indefinite Delivery Contract (IDC)",
+      "B": "Contract",
+      "C": "Grant",
+      "D": "Loan",
+      "02": "Non-Loan Assistance (Payment)",
+      "03": "Non-Loan Assistance (Grant)",
+      "04": "Non-Loan Assistance (Subsidy)",
+      "05": "Non-Loan Assistance (Insurance)",
+      "06": "Non-Loan Assistance (Other)",
+      "07": "Loan",
+      "08": "Loan Guarantee",
+      "09": "Direct Loan",
+      "10": "Other",
+      "11": "Cooperative Agreement"
+    },
+    "time_periods": {
+      "fiscal_year": "Oct 1 - Sep 30 (e.g., FY2024 = Oct 1, 2023 - Sep 30, 2024)",
+      "calendar_year": "Jan 1 - Dec 31",
+      "month": "First day - Last day of month",
+      "quarter": "3-month periods (Q1-Q4)"
+    },
+    "agency_shortcuts": {
+      "dod": "Department of Defense",
+      "defense": "Department of Defense",
+      "gsa": "General Services Administration",
+      "hhs": "Department of Health and Human Services",
+      "va": "Department of Veterans Affairs",
+      "dhs": "Department of Homeland Security",
+      "nasa": "National Aeronautics and Space Administration"
+    }
+  },
+  "best_practices": [
+    "Always specify date ranges for better performance and accuracy",
+    "Use award type codes to filter by contract, grant, loan, etc.",
+    "Combine multiple filters rather than relying on keyword search alone",
+    "Cache results when possible to avoid duplicate requests",
+    "Space requests at least 100ms apart to avoid rate limiting",
+    "Handle masked Award IDs (ZZ*) by using date range filters",
+    "Use specific agency names (not abbreviations) for agency filtering",
+    "For large result sets, use pagination with limit parameter",
+    "Check response messages for warnings about data freshness"
+  ],
+  "data_freshness": {
+    "awards_data": "Updated daily (previous day's data)",
+    "agency_spending": "Updated daily",
+    "subaward_data": "Updated weekly",
+    "vendor_profiles": "Updated monthly"
+  }
+}

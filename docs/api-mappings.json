@@ -1,0 +1,544 @@
+{
+  "version": "1.0",
+  "title": "MCP Tool to USASpending API Mappings",
+  "description": "Maps MCP server tools to USASpending API endpoints with parameter transformations and known issues",
+  "last_updated": "2025-10-30",
+  "mappings": {
+    "search_federal_awards": {
+      "mcp_tool": "search_federal_awards",
+      "usaspending_endpoint": "/search/spending_by_award/",
+      "http_method": "POST",
+      "description": "Search for federal awards using keywords",
+      "mcp_parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "example": "software development"
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 5,
+          "range": "1-100"
+        },
+        "output_format": {
+          "type": "string",
+          "required": false,
+          "default": "text",
+          "values": ["text", "csv"]
+        },
+        "start_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD"
+        },
+        "end_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD"
+        }
+      },
+      "api_payload_template": {
+        "filters": {
+          "keywords": "from query parameter",
+          "time_period": [
+            {
+              "start_date": "from start_date (defaults to 180 days ago)",
+              "end_date": "from end_date (defaults to today)"
+            }
+          ],
+          "award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09", "10", "11"]
+        },
+        "fields": [
+          "Award ID",
+          "Recipient Name",
+          "Award Amount",
+          "Award Type",
+          "Description",
+          "generated_internal_id"
+        ],
+        "limit": "from max_results",
+        "page": 1
+      },
+      "response_transformation": {
+        "raw_api_response": "array[object]",
+        "mcp_output": "Formatted text table with Award ID, Recipient, Amount, Type, Description"
+      },
+      "known_issues": [
+        "Broad keyword matching may return unrelated results",
+        "Limited to past 6 years of data",
+        "Masked Award IDs indicate test data"
+      ],
+      "workarounds": [
+        "Use specific keywords combined with date ranges",
+        "Filter by agency for more relevant results",
+        "Use exact Award ID with get_award_by_id for precision"
+      ],
+      "query_examples": [
+        "query='software' → searches for software-related awards",
+        "query='NASA' max_results=20 → top 20 NASA awards",
+        "query='vehicle' start_date='2024-01-01' end_date='2024-12-31' → vehicle awards in 2024"
+      ]
+    },
+    "get_award_by_id": {
+      "mcp_tool": "get_award_by_id",
+      "usaspending_endpoint": "/search/spending_by_award/",
+      "http_method": "POST",
+      "description": "Look up a specific award by its exact Award ID",
+      "mcp_parameters": {
+        "award_id": {
+          "type": "string",
+          "required": true,
+          "example": "47QSWA26P02KE"
+        }
+      },
+      "api_payload_template": {
+        "filters": {
+          "keywords": "from award_id",
+          "award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09", "10", "11"],
+          "time_period": [
+            {
+              "start_date": "2020-01-01",
+              "end_date": "2026-12-31"
+            }
+          ]
+        },
+        "fields": ["Award ID", "Recipient Name", "Award Amount", "Description", "Award Type", "generated_internal_id"],
+        "limit": 1
+      },
+      "response_transformation": {
+        "raw_api_response": "Single award object from results array",
+        "mcp_output": "Formatted award details with USASpending.gov link"
+      },
+      "known_issues": [
+        "Award IDs are formatted inconsistently (some masked as ZZ71)",
+        "Awards older than 2020 may not be found",
+        "Some IDs from test data won't return results"
+      ],
+      "workarounds": [
+        "Try searching with start_date extended to 2010 for older awards",
+        "Use search_federal_awards to find correct Award ID format first",
+        "Check if Award ID has masked format (ZZ*)"
+      ]
+    },
+    "get_spending_trends": {
+      "mcp_tool": "get_spending_trends",
+      "usaspending_endpoint": "/search/spending_over_time/",
+      "http_method": "POST",
+      "description": "Analyze federal spending trends over time (FY25 vs FY24 analysis)",
+      "mcp_parameters": {
+        "period": {
+          "type": "string",
+          "required": false,
+          "default": "fiscal_year",
+          "values": ["fiscal_year", "calendar_year", "month", "quarter"]
+        },
+        "agency": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "example": "dod"
+        },
+        "award_type": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "values": ["A", "B", "C", "D"]
+        }
+      },
+      "api_payload_template": {
+        "filters": {
+          "award_type_codes": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09"],
+          "time_period": [
+            {
+              "start_date": "10 years ago",
+              "end_date": "today"
+            }
+          ],
+          "agencies": "optional, from agency mapping"
+        },
+        "group": "from period parameter (fiscal_year | calendar_year | month | quarter)"
+      },
+      "parameter_mappings": {
+        "agency": {
+          "dod": "Department of Defense",
+          "defense": "Department of Defense",
+          "gsa": "General Services Administration",
+          "hhs": "Department of Health and Human Services",
+          "va": "Department of Veterans Affairs",
+          "dhs": "Department of Homeland Security",
+          "nasa": "National Aeronautics and Space Administration"
+        },
+        "period_to_group": {
+          "fiscal_year": "fiscal_year",
+          "calendar_year": "calendar_year",
+          "month": "month",
+          "quarter": "quarter"
+        }
+      },
+      "response_transformation": {
+        "raw_api_response": {
+          "group": "fiscal_year",
+          "results": [
+            {
+              "time_period": { "fiscal_year": "2024" },
+              "aggregated_amount": 4944600129886.14,
+              "Contract_Obligations": 740223668362.77,
+              "Direct_Obligations": 2941934320606.32,
+              "Grant_Obligations": 1209751429435.39,
+              "Idv_Obligations": 15433574543.66,
+              "Loan_Obligations": -1654083765.96,
+              "Other_Obligations": 38911220703.96
+            }
+          ]
+        },
+        "mcp_output": "Formatted table with Period, Total Spending, Award Count, YoY Change %"
+      },
+      "known_issues": [
+        "CRITICAL: Field name must be 'group' not 'group_by' - causes 422 error",
+        "Response field names use underscores: aggregated_amount (not total_spending)",
+        "Time period field names vary by grouping: 'fiscal_year' vs 'calendar_year' vs 'month'",
+        "When grouping by fiscal_year, no quarter/month fields are present",
+        "Outlay fields are null for spending_level='transactions'"
+      ],
+      "workarounds": [
+        "Always use 'group' parameter, never 'group_by'",
+        "Access response: result['aggregated_amount'] for total",
+        "Parse time_period conditionally based on group parameter",
+        "Use raw fields directly: Contract_Obligations, Direct_Obligations, etc.",
+        "Expected FY24 vs FY25 comparison to show Direct Obligations +3.72%, Contracts -15.73%"
+      ],
+      "query_examples": [
+        "period='fiscal_year' → FY24 vs FY25 trends (use for your FY25 analysis)",
+        "period='calendar_year' agency='dod' → DoD spending by calendar year",
+        "period='month' → monthly spending trends (last 10 years)"
+      ]
+    },
+    "get_spending_by_state": {
+      "mcp_tool": "get_spending_by_state",
+      "usaspending_endpoint": "/search/spending_by_geography/",
+      "http_method": "POST",
+      "description": "Get federal spending breakdown by state",
+      "mcp_parameters": {
+        "state": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "example": "CA"
+        },
+        "top_n": {
+          "type": "integer",
+          "required": false,
+          "default": 10
+        }
+      },
+      "api_payload_template": {
+        "filters": {},
+        "scope": "place_of_performance",
+        "geo_layer": "state",
+        "geo_layer_filters": "optional state codes"
+      },
+      "response_transformation": {
+        "raw_api_response": "array[GeographyTypeResult]",
+        "mcp_output": "Sorted table with State, Spending, Per Capita"
+      }
+    },
+    "get_top_naics_breakdown": {
+      "mcp_tool": "get_top_naics_breakdown",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "description": "Get top NAICS (industry) codes by spending",
+      "mcp_parameters": {
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "default": 20
+        }
+      },
+      "api_payload_template": {
+        "category": "naics",
+        "filters": {}
+      },
+      "common_naics_codes": {
+        "334111": "Electronic Computers Manufacturing",
+        "541511": "Custom Computer Programming Services",
+        "541512": "Computer Systems Design Services",
+        "561110": "Office Administrative Services",
+        "541613": "Marketing Consulting Services"
+      }
+    },
+    "get_naics_psc_info": {
+      "mcp_tool": "get_naics_psc_info",
+      "usaspending_endpoint": "/search/spending_by_category/",
+      "http_method": "POST",
+      "description": "Look up NAICS or PSC code details",
+      "mcp_parameters": {
+        "search_term": {
+          "type": "string",
+          "required": true,
+          "example": "software"
+        },
+        "code_type": {
+          "type": "string",
+          "required": false,
+          "default": "both",
+          "values": ["naics", "psc", "both"]
+        }
+      },
+      "api_payload_template": {
+        "category": "naics or psc based on code_type",
+        "filters": {}
+      },
+      "common_psc_codes": {
+        "2510": "Motor vehicles (passenger automobiles)",
+        "2515": "Motor vehicles (trucks, buses, special purpose)",
+        "2530": "Vehicular brake, steering, axle, wheel, track",
+        "2540": "Vehicular furniture & accessories",
+        "7030": "IT Software Development",
+        "7050": "IT Integration Services"
+      }
+    },
+    "get_vendor_profile": {
+      "mcp_tool": "get_vendor_profile",
+      "usaspending_endpoint": "/recipients/",
+      "http_method": "GET or /search/spending_by_award/",
+      "description": "Get detailed profile of a federal contractor",
+      "mcp_parameters": {
+        "vendor_name": {
+          "type": "string",
+          "required": true,
+          "example": "IBM CORPORATION"
+        },
+        "show_contracts": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "values": ["true", "false"]
+        }
+      },
+      "note": "Name must be in exact uppercase format as in USASpending database"
+    },
+    "get_agency_profile": {
+      "mcp_tool": "get_agency_profile",
+      "usaspending_endpoint": "/agencies/ or /search/spending_by_category/awarding_agency/",
+      "http_method": "GET or POST",
+      "description": "Get spending information for a federal agency",
+      "mcp_parameters": {
+        "agency": {
+          "type": "string",
+          "required": true,
+          "example": "Department of Defense"
+        },
+        "detail_level": {
+          "type": "string",
+          "required": false,
+          "default": "detail",
+          "values": ["summary", "detail"]
+        }
+      },
+      "agency_name_mapping": {
+        "dod": "Department of Defense",
+        "gsa": "General Services Administration",
+        "hhs": "Department of Health and Human Services",
+        "va": "Department of Veterans Affairs",
+        "dhs": "Department of Homeland Security",
+        "nasa": "National Aeronautics and Space Administration"
+      }
+    },
+    "get_budget_functions": {
+      "mcp_tool": "get_budget_functions",
+      "usaspending_endpoint": "/search/spending_by_category/ with category='object_class'",
+      "http_method": "POST",
+      "description": "Analyze spending by budget function",
+      "mcp_parameters": {
+        "agency": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "detailed": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "values": ["true", "false"]
+        }
+      }
+    },
+    "get_recipient_details": {
+      "mcp_tool": "get_recipient_details",
+      "usaspending_endpoint": "/recipients/{id}/ or /search/spending_by_award/",
+      "http_method": "GET or POST",
+      "description": "Get details about an award recipient",
+      "mcp_parameters": {
+        "recipient_id": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "recipient_name": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "detail_level": {
+          "type": "string",
+          "required": false,
+          "default": "detail",
+          "values": ["summary", "detail"]
+        }
+      },
+      "note": "Either recipient_id or recipient_name must be provided"
+    },
+    "get_subaward_data": {
+      "mcp_tool": "get_subaward_data",
+      "usaspending_endpoint": "/subawards/ or /search/spending_by_award/ with spending_level='subawards'",
+      "http_method": "GET or POST",
+      "description": "Get subcontract and subgrant data",
+      "mcp_parameters": {
+        "award_id": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "vendor_name": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 10
+        }
+      },
+      "known_issues": [
+        "Subaward data has limited availability",
+        "Not all awards include subaward information"
+      ]
+    },
+    "get_disaster_funding": {
+      "mcp_tool": "get_disaster_funding",
+      "usaspending_endpoint": "/disaster/spending_by_award/",
+      "http_method": "POST",
+      "description": "Query emergency and disaster-related spending",
+      "mcp_parameters": {
+        "disaster_type": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "example": "hurricane"
+        },
+        "state": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "year": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        },
+        "max_results": {
+          "type": "integer",
+          "required": false,
+          "default": 10
+        }
+      }
+    },
+    "get_award_details": {
+      "mcp_tool": "get_award_details",
+      "usaspending_endpoint": "/awards/{id}/ or /search/spending_by_award/",
+      "http_method": "GET or POST",
+      "description": "Get complete details for a specific award",
+      "mcp_parameters": {
+        "award_id": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "get_object_class_analysis": {
+      "mcp_tool": "get_object_class_analysis",
+      "usaspending_endpoint": "/search/spending_by_category/ with category='object_class'",
+      "http_method": "POST",
+      "description": "Analyze spending by object class (budget code)"
+    },
+    "get_field_documentation": {
+      "mcp_tool": "get_field_documentation",
+      "usaspending_endpoint": "No direct endpoint - local documentation",
+      "description": "Get field definitions and documentation"
+    },
+    "download_award_data": {
+      "mcp_tool": "download_award_data",
+      "usaspending_endpoint": "/download/ or /bulk_download/",
+      "http_method": "POST",
+      "description": "Download award data in various formats",
+      "mcp_parameters": {
+        "query": {
+          "type": "string",
+          "required": true
+        },
+        "file_format": {
+          "type": "string",
+          "required": false,
+          "default": "csv",
+          "values": ["csv", "json", "xlsx"]
+        },
+        "include_transactions": {
+          "type": "string",
+          "required": false,
+          "default": "false",
+          "values": ["true", "false"]
+        }
+      }
+    }
+  },
+  "common_patterns": {
+    "analyze_fy_trends": {
+      "description": "Analyze FY25 vs FY24 federal spending",
+      "tool": "get_spending_trends",
+      "parameters": {
+        "period": "fiscal_year"
+      },
+      "expected_result": "Time series showing FY24 and FY25 spending with breakdown by obligation type"
+    },
+    "find_contracts_by_vendor": {
+      "description": "Find all contracts for a specific vendor",
+      "tools_sequence": [
+        "search_federal_awards (query=vendor_name)",
+        "get_vendor_profile (vendor_name=...)",
+        "get_award_details for specific awards"
+      ]
+    },
+    "analyze_agency_spending": {
+      "description": "Comprehensive analysis of an agency's spending",
+      "tools_sequence": [
+        "get_agency_profile",
+        "get_spending_trends (agency=...)",
+        "get_budget_functions (agency=...)",
+        "get_top_naics_breakdown"
+      ]
+    },
+    "track_disaster_funding": {
+      "description": "Track emergency spending by disaster",
+      "tools_sequence": [
+        "emergency_spending_tracker or get_disaster_funding",
+        "get_spending_by_state (filtered to disaster region)"
+      ]
+    }
+  },
+  "error_troubleshooting": {
+    "422_unprocessable_entity_spending_over_time": {
+      "cause": "Using 'group_by' instead of 'group' parameter",
+      "solution": "Check get_spending_trends implementation - ensure API call uses 'group' parameter"
+    },
+    "no_results_keyword_search": {
+      "cause": "Broad keyword or no exact matches",
+      "solution": "Narrow date range, use specific keywords, try exact Award ID with get_award_by_id"
+    },
+    "masked_award_ids": {
+      "cause": "Test data or incomplete records",
+      "solution": "Use date filters to get recent quality data, search for other awards from same period"
+    }
+  }
+}

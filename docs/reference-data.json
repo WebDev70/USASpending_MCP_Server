@@ -1,0 +1,598 @@
+{
+  "version": "1.0",
+  "title": "USASpending Reference Data - Lookup Tables",
+  "description": "Complete reference of all valid codes, enums, and lookup values for constructing queries",
+  "last_updated": "2025-10-30",
+  "unique_entity_identifier": {
+    "description": "UEI - Unique Entity Identifier for federal contractors and vendors",
+    "what_is_uei": "A unique 13-character alphanumeric code assigned to all federal contractors, grantees, and vendors by the federal government.",
+    "format": "13 characters: mix of numbers and uppercase letters (e.g., NWM1JWVDA853, G2NLP3NLX5Q7)",
+    "replaced": "DUNS number (though both may exist for legacy reasons)",
+    "replaces_what": "UEI replaced the Data Universal Numbering System (DUNS) number as the primary federal vendor identifier",
+    "how_to_find": [
+      "Ask the vendor directly - they know their UEI",
+      "Search USASpending.gov for the company name and get UEI from results",
+      "Use search_federal_awards with company name, then extract UEI from results",
+      "Use get_vendor_by_uei if you already have the UEI"
+    ],
+    "search_methods": {
+      "by_uei": {
+        "tool": "get_vendor_by_uei",
+        "description": "Fastest method if you have the exact UEI",
+        "example": "get_vendor_by_uei('NWM1JWVDA853')"
+      },
+      "by_keyword": {
+        "tool": "search_federal_awards",
+        "description": "Works with company name, type, location, etc.",
+        "example": "search_federal_awards('AM General LLC')"
+      },
+      "by_uei_keyword_search": {
+        "tool": "search_federal_awards",
+        "description": "UEI keyword search also works if you have the UEI but not the tool",
+        "example": "search_federal_awards('NWM1JWVDA853')"
+      }
+    },
+    "common_uei_examples": {
+      "NWM1JWVDA853": {
+        "vendor_name": "AM General LLC",
+        "primary_customer": "Department of Defense",
+        "total_federal_spending": "$4.5B+",
+        "note": "Major defense contractor"
+      },
+      "G2NLP3NLX5Q7": {
+        "vendor_name": "Graybar Electric Company, Inc.",
+        "note": "Example vendor with government contracts"
+      }
+    }
+  },
+  "federal_agencies": {
+    "description": "Complete list of federal agencies with codes and tiers",
+    "agencies": [
+      {
+        "name": "Department of Defense",
+        "codes": ["DOD", "dod"],
+        "toptier": true,
+        "agency_id": "097",
+        "abbreviation": "DoD",
+        "major_subagencies": [
+          "Department of the Air Force",
+          "Department of the Army",
+          "Department of the Navy",
+          "Defense Logistics Agency"
+        ]
+      },
+      {
+        "name": "General Services Administration",
+        "codes": ["GSA", "gsa"],
+        "toptier": true,
+        "agency_id": "047",
+        "abbreviation": "GSA",
+        "focus": "Federal procurement, property management"
+      },
+      {
+        "name": "Department of Health and Human Services",
+        "codes": ["HHS", "hhs"],
+        "toptier": true,
+        "agency_id": "075",
+        "abbreviation": "HHS",
+        "major_subagencies": [
+          "Centers for Disease Control and Prevention",
+          "Food and Drug Administration",
+          "Centers for Medicare and Medicaid Services",
+          "National Institutes of Health"
+        ]
+      },
+      {
+        "name": "Department of Veterans Affairs",
+        "codes": ["VA", "va"],
+        "toptier": true,
+        "agency_id": "036",
+        "abbreviation": "VA",
+        "focus": "Veterans benefits and services"
+      },
+      {
+        "name": "Department of Homeland Security",
+        "codes": ["DHS", "dhs"],
+        "toptier": true,
+        "agency_id": "070",
+        "abbreviation": "DHS",
+        "major_subagencies": [
+          "Customs and Border Protection",
+          "Immigration and Customs Enforcement",
+          "Federal Emergency Management Agency"
+        ]
+      },
+      {
+        "name": "National Aeronautics and Space Administration",
+        "codes": ["NASA", "nasa"],
+        "toptier": true,
+        "agency_id": "080",
+        "abbreviation": "NASA",
+        "focus": "Space exploration and research"
+      },
+      {
+        "name": "Department of Transportation",
+        "codes": ["DOT", "dot"],
+        "toptier": true,
+        "agency_id": "069",
+        "abbreviation": "DOT"
+      },
+      {
+        "name": "Department of Energy",
+        "codes": ["DOE", "doe"],
+        "toptier": true,
+        "agency_id": "089",
+        "abbreviation": "DOE"
+      },
+      {
+        "name": "Environmental Protection Agency",
+        "codes": ["EPA", "epa"],
+        "toptier": true,
+        "agency_id": "066",
+        "abbreviation": "EPA"
+      },
+      {
+        "name": "Department of Interior",
+        "codes": ["DOI", "doi"],
+        "toptier": true,
+        "agency_id": "010"
+      }
+    ],
+    "note": "For API queries, use full name (e.g., 'Department of Defense') not abbreviation"
+  },
+  "award_type_codes": {
+    "description": "All federal award type codes and their meanings",
+    "codes": {
+      "A": {
+        "name": "BPA/Indefinite Delivery Contract (IDC)",
+        "abbreviation": "BPA/IDC",
+        "description": "Blanket Purchase Agreement or Indefinite Delivery Contract - a contract vehicle",
+        "category": "contract",
+        "typical_value_range": "$100K - $10M+"
+      },
+      "B": {
+        "name": "Contract",
+        "abbreviation": "Contract",
+        "description": "Standard federal contract for goods or services",
+        "category": "contract",
+        "typical_value_range": "$1K - $100M+"
+      },
+      "C": {
+        "name": "Grant",
+        "abbreviation": "Grant",
+        "description": "Federal grant to states, organizations, or individuals",
+        "category": "grant",
+        "typical_value_range": "$10K - $50M+"
+      },
+      "D": {
+        "name": "Loan",
+        "abbreviation": "Loan",
+        "description": "Federal loan programs",
+        "category": "loan",
+        "typical_value_range": "$10K - $1M+"
+      },
+      "02": {
+        "name": "Non-Loan Assistance - Payment",
+        "abbreviation": "Payment",
+        "description": "Direct payment for specified use",
+        "category": "assistance"
+      },
+      "03": {
+        "name": "Non-Loan Assistance - Grant",
+        "abbreviation": "Grant (Non-Loan)",
+        "description": "Grant that is not a loan",
+        "category": "assistance"
+      },
+      "04": {
+        "name": "Non-Loan Assistance - Subsidy",
+        "abbreviation": "Subsidy",
+        "description": "Subsidy or other benefit",
+        "category": "assistance"
+      },
+      "05": {
+        "name": "Non-Loan Assistance - Insurance",
+        "abbreviation": "Insurance",
+        "description": "Insurance or guarantee",
+        "category": "assistance"
+      },
+      "06": {
+        "name": "Non-Loan Assistance - Other",
+        "abbreviation": "Other Assistance",
+        "description": "Other non-loan assistance",
+        "category": "assistance"
+      },
+      "07": {
+        "name": "Loan - Direct",
+        "abbreviation": "Direct Loan",
+        "description": "Direct loan from federal government",
+        "category": "loan"
+      },
+      "08": {
+        "name": "Loan - Guaranteed",
+        "abbreviation": "Loan Guarantee",
+        "description": "Loan guaranteed by federal government",
+        "category": "loan"
+      },
+      "09": {
+        "name": "Direct Loan",
+        "abbreviation": "Direct Loan",
+        "description": "Direct federal loan",
+        "category": "loan"
+      },
+      "10": {
+        "name": "Other",
+        "abbreviation": "Other",
+        "description": "Other award type",
+        "category": "other"
+      },
+      "11": {
+        "name": "Cooperative Agreement",
+        "abbreviation": "Cooperative Agreement",
+        "description": "Cooperative agreement between federal and non-federal entity",
+        "category": "agreement"
+      }
+    },
+    "groupings": {
+      "contracts": ["A", "B"],
+      "grants": ["C", "03"],
+      "loans": ["D", "07", "08", "09"],
+      "assistance": ["02", "03", "04", "05", "06"],
+      "all": ["A", "B", "C", "D", "02", "03", "04", "05", "07", "08", "09", "10", "11"]
+    }
+  },
+  "time_period_formats": {
+    "description": "Valid time period formats for different grouping types",
+    "fiscal_year": {
+      "format": "YYYY",
+      "example": "2024",
+      "meaning": "Oct 1, 2023 - Sep 30, 2024",
+      "group_by": "fiscal_year"
+    },
+    "calendar_year": {
+      "format": "YYYY",
+      "example": "2024",
+      "meaning": "Jan 1, 2024 - Dec 31, 2024",
+      "group_by": "calendar_year"
+    },
+    "quarter": {
+      "format": "YYYY-QN",
+      "example": "2024-Q1",
+      "meaning": "Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec",
+      "group_by": "quarter"
+    },
+    "month": {
+      "format": "YYYY-MM",
+      "example": "2024-01",
+      "meaning": "Full calendar month",
+      "group_by": "month"
+    },
+    "note": "Use these formats in response parsing, not in API requests (API requests use YYYY-MM-DD)"
+  },
+  "naics_codes": {
+    "description": "North American Industry Classification System - Top 50 NAICS codes by federal spending",
+    "note": "Full NAICS table has 1000+ codes. This includes the most frequently used in federal spending.",
+    "codes": {
+      "541511": {
+        "title": "Custom Computer Programming Services",
+        "sector": "Professional, Scientific, and Technical Services",
+        "federal_spending_rank": 1,
+        "typical_contracts": "Software development, IT services"
+      },
+      "334111": {
+        "title": "Electronic Computers Manufacturing",
+        "sector": "Computer and Electronic Product Manufacturing",
+        "federal_spending_rank": 5,
+        "typical_contracts": "Server manufacturing, computer hardware"
+      },
+      "541512": {
+        "title": "Computer Systems Design Services",
+        "sector": "Professional, Scientific, and Technical Services",
+        "federal_spending_rank": 2,
+        "typical_contracts": "IT infrastructure, system integration"
+      },
+      "541519": {
+        "title": "Other Computer Related Services",
+        "sector": "Professional, Scientific, and Technical Services",
+        "federal_spending_rank": 8,
+        "typical_contracts": "IT consulting, data management"
+      },
+      "336411": {
+        "title": "Aircraft Manufacturing",
+        "sector": "Transportation Equipment Manufacturing",
+        "federal_spending_rank": 3,
+        "typical_contracts": "Defense aircraft, aircraft components"
+      },
+      "336413": {
+        "title": "Other Aircraft Parts and Auxiliary Equipment Manufacturing",
+        "sector": "Transportation Equipment Manufacturing",
+        "federal_spending_rank": 10,
+        "typical_contracts": "Aircraft parts, defense components"
+      },
+      "333314": {
+        "title": "Optical Instrument and Lens Manufacturing",
+        "sector": "Machinery Manufacturing",
+        "federal_spending_rank": 15,
+        "typical_contracts": "Defense optics, surveillance equipment"
+      },
+      "238910": {
+        "title": "Site Preparation Contractors",
+        "sector": "Construction Services",
+        "federal_spending_rank": 20,
+        "typical_contracts": "Construction, facility preparation"
+      },
+      "541330": {
+        "title": "Engineering Services",
+        "sector": "Professional Services",
+        "federal_spending_rank": 4,
+        "typical_contracts": "Engineering, design, infrastructure"
+      },
+      "541380": {
+        "title": "Testing Laboratories",
+        "sector": "Professional Services",
+        "federal_spending_rank": 25,
+        "typical_contracts": "Quality testing, research services"
+      },
+      "922150": {
+        "title": "Federal Agencies - Defense",
+        "sector": "Public Administration",
+        "federal_spending_rank": 7
+      },
+      "561110": {
+        "title": "Office Administrative Services",
+        "sector": "Administrative Services",
+        "federal_spending_rank": 12,
+        "typical_contracts": "Administrative support, clerical services"
+      },
+      "621111": {
+        "title": "Offices of Physicians",
+        "sector": "Healthcare",
+        "federal_spending_rank": 18,
+        "typical_contracts": "Medical services, VA healthcare"
+      },
+      "813110": {
+        "title": "Religious Organizations",
+        "sector": "Membership Organizations",
+        "federal_spending_rank": 30,
+        "typical_contracts": "Social services, education grants"
+      },
+      "611110": {
+        "title": "Elementary and Secondary Schools",
+        "sector": "Education",
+        "federal_spending_rank": 22,
+        "typical_contracts": "Education grants, school funding"
+      }
+    }
+  },
+  "psc_codes": {
+    "description": "Product Service Codes - Classification for goods and services",
+    "note": "Extensive PSC system. This includes the most federal spending categories.",
+    "categories": {
+      "2510": {
+        "title": "Motor Vehicles - Passenger Automobiles",
+        "examples": ["Sedans", "SUVs", "Compact cars"],
+        "federal_category": "Transportation"
+      },
+      "2515": {
+        "title": "Motor Vehicles - Trucks",
+        "examples": ["Heavy trucks", "Pickup trucks", "Delivery trucks"],
+        "federal_category": "Transportation"
+      },
+      "2530": {
+        "title": "Vehicular Brake, Steering, Axle, Wheel, Track",
+        "examples": ["Brake systems", "Steering components"],
+        "federal_category": "Vehicle Components"
+      },
+      "2540": {
+        "title": "Vehicular Furniture and Accessories",
+        "examples": ["Seats", "Cargo systems", "Interior fittings"],
+        "federal_category": "Vehicle Components"
+      },
+      "3110": {
+        "title": "Aircraft and Airframe",
+        "examples": ["Military aircraft", "Helicopters", "Drones"],
+        "federal_category": "Defense"
+      },
+      "3320": {
+        "title": "Aircraft Engines and Components",
+        "examples": ["Turbine engines", "Propulsion systems"],
+        "federal_category": "Defense"
+      },
+      "5820": {
+        "title": "Ammunition and Explosives",
+        "examples": ["Munitions", "Explosive devices"],
+        "federal_category": "Defense"
+      },
+      "6300": {
+        "title": "Weapons",
+        "examples": ["Firearms", "Missiles", "Weapons systems"],
+        "federal_category": "Defense"
+      },
+      "7030": {
+        "title": "IT Software Development",
+        "examples": ["Custom software", "Application development"],
+        "federal_category": "Information Technology",
+        "federal_spending_rank": "TOP"
+      },
+      "7050": {
+        "title": "IT Integration Services",
+        "examples": ["System integration", "IT consulting"],
+        "federal_category": "Information Technology",
+        "federal_spending_rank": "TOP"
+      },
+      "8010": {
+        "title": "Maintenance and Support",
+        "examples": ["Equipment maintenance", "Support services"],
+        "federal_category": "Services"
+      },
+      "9000": {
+        "title": "Miscellaneous",
+        "examples": ["Other services and goods"],
+        "federal_category": "Other"
+      }
+    }
+  },
+  "states": {
+    "description": "US states with abbreviations and FIPS codes",
+    "count": 50,
+    "states": {
+      "AL": { "name": "Alabama", "fips": "01" },
+      "AK": { "name": "Alaska", "fips": "02" },
+      "AZ": { "name": "Arizona", "fips": "04" },
+      "AR": { "name": "Arkansas", "fips": "05" },
+      "CA": { "name": "California", "fips": "06" },
+      "CO": { "name": "Colorado", "fips": "08" },
+      "CT": { "name": "Connecticut", "fips": "09" },
+      "DE": { "name": "Delaware", "fips": "10" },
+      "FL": { "name": "Florida", "fips": "12" },
+      "GA": { "name": "Georgia", "fips": "13" },
+      "HI": { "name": "Hawaii", "fips": "15" },
+      "ID": { "name": "Idaho", "fips": "16" },
+      "IL": { "name": "Illinois", "fips": "17" },
+      "IN": { "name": "Indiana", "fips": "18" },
+      "IA": { "name": "Iowa", "fips": "19" },
+      "KS": { "name": "Kansas", "fips": "20" },
+      "KY": { "name": "Kentucky", "fips": "21" },
+      "LA": { "name": "Louisiana", "fips": "22" },
+      "ME": { "name": "Maine", "fips": "23" },
+      "MD": { "name": "Maryland", "fips": "24" },
+      "MA": { "name": "Massachusetts", "fips": "25" },
+      "MI": { "name": "Michigan", "fips": "26" },
+      "MN": { "name": "Minnesota", "fips": "27" },
+      "MS": { "name": "Mississippi", "fips": "28" },
+      "MO": { "name": "Missouri", "fips": "29" },
+      "MT": { "name": "Montana", "fips": "30" },
+      "NE": { "name": "Nebraska", "fips": "31" },
+      "NV": { "name": "Nevada", "fips": "32" },
+      "NH": { "name": "New Hampshire", "fips": "33" },
+      "NJ": { "name": "New Jersey", "fips": "34" },
+      "NM": { "name": "New Mexico", "fips": "35" },
+      "NY": { "name": "New York", "fips": "36" },
+      "NC": { "name": "North Carolina", "fips": "37" },
+      "ND": { "name": "North Dakota", "fips": "38" },
+      "OH": { "name": "Ohio", "fips": "39" },
+      "OK": { "name": "Oklahoma", "fips": "40" },
+      "OR": { "name": "Oregon", "fips": "41" },
+      "PA": { "name": "Pennsylvania", "fips": "42" },
+      "RI": { "name": "Rhode Island", "fips": "44" },
+      "SC": { "name": "South Carolina", "fips": "45" },
+      "SD": { "name": "South Dakota", "fips": "46" },
+      "TN": { "name": "Tennessee", "fips": "47" },
+      "TX": { "name": "Texas", "fips": "48" },
+      "UT": { "name": "Utah", "fips": "49" },
+      "VT": { "name": "Vermont", "fips": "50" },
+      "VA": { "name": "Virginia", "fips": "51" },
+      "WA": { "name": "Washington", "fips": "53" },
+      "WV": { "name": "West Virginia", "fips": "54" },
+      "WI": { "name": "Wisconsin", "fips": "55" },
+      "WY": { "name": "Wyoming", "fips": "56" }
+    }
+  },
+  "budget_functions": {
+    "description": "Federal budget functions (major spending categories)",
+    "functions": {
+      "050": { "name": "National Defense", "budget_authority": "Major" },
+      "150": { "name": "International Affairs", "budget_authority": "Minor" },
+      "250": { "name": "General Science, Space & Technology", "budget_authority": "Moderate" },
+      "270": { "name": "Energy", "budget_authority": "Moderate" },
+      "300": { "name": "Natural Resources & Environment", "budget_authority": "Moderate" },
+      "350": { "name": "Agriculture", "budget_authority": "Moderate" },
+      "370": { "name": "Commerce & Housing Credit", "budget_authority": "Moderate" },
+      "400": { "name": "Transportation", "budget_authority": "Moderate" },
+      "500": { "name": "Education, Training, Employment & Social Services", "budget_authority": "Major" },
+      "550": { "name": "Health", "budget_authority": "Major" },
+      "600": { "name": "Medicare", "budget_authority": "Major" },
+      "650": { "name": "Social Security", "budget_authority": "Major" },
+      "700": { "name": "Veterans Benefits & Services", "budget_authority": "Moderate" },
+      "750": { "name": "Administration of Justice", "budget_authority": "Moderate" },
+      "800": { "name": "General Government", "budget_authority": "Moderate" }
+    }
+  },
+  "object_classes": {
+    "description": "Budget object classes (types of spending)",
+    "classes": {
+      "1000": { "name": "Personnel Compensation", "description": "Salaries, wages, benefits" },
+      "2000": { "name": "Contractual Services", "description": "Services contracts" },
+      "3000": { "name": "Supplies & Materials", "description": "Office supplies, equipment" },
+      "4000": { "name": "Equipment", "description": "Capital equipment purchases" },
+      "4100": { "name": "Equipment & Related Property", "description": "Equipment under $25K" },
+      "4500": { "name": "Equipment Purchases", "description": "Equipment and assets" },
+      "5000": { "name": "Grants & Donations", "description": "Grant programs, donations" },
+      "6000": { "name": "Interest & Unvouchered Costs", "description": "Interest, administrative costs" },
+      "9000": { "name": "Other Objects", "description": "Miscellaneous spending" }
+    }
+  },
+  "disaster_types": {
+    "description": "Common disaster/emergency types in federal spending",
+    "types": [
+      "hurricane",
+      "tornado",
+      "flood",
+      "earthquake",
+      "wildfire",
+      "pandemic",
+      "winter_storm",
+      "drought",
+      "tsunami",
+      "volcano",
+      "civil_unrest",
+      "terrorism",
+      "public_health_emergency"
+    ]
+  },
+  "domestic_vs_foreign": {
+    "description": "Spending scope filter",
+    "options": {
+      "domestic": "Spending within the United States",
+      "foreign": "Spending for international/foreign activities",
+      "both": "Include both domestic and foreign (default)"
+    }
+  },
+  "common_filter_values": {
+    "description": "Quick reference for common filter parameter values",
+    "spending_level_options": ["transactions", "awards", "subawards"],
+    "scope_options": ["place_of_performance", "recipient_location"],
+    "geo_layer_options": ["state", "county", "district", "country"],
+    "group_options": ["fiscal_year", "calendar_year", "quarter", "month"],
+    "category_options": [
+      "awarding_agency",
+      "awarding_subagency",
+      "cfda",
+      "country",
+      "county",
+      "defc",
+      "district",
+      "federal_account",
+      "funding_agency",
+      "funding_subagency",
+      "naics",
+      "object_class",
+      "program_activity",
+      "psc",
+      "recipient_duns",
+      "recipient_parent_duns",
+      "state_territory",
+      "tas"
+    ]
+  },
+  "validation_rules": {
+    "limit": {
+      "min": 1,
+      "max": 100,
+      "default": 10,
+      "description": "Results per page"
+    },
+    "page": {
+      "min": 1,
+      "default": 1,
+      "description": "Page number for pagination"
+    },
+    "date_format": {
+      "format": "YYYY-MM-DD",
+      "earliest_allowed": "2007-10-01",
+      "description": "All dates must be in this format"
+    },
+    "max_results_without_filters": 100,
+    "concurrent_request_limit": 10,
+    "min_spacing_between_requests_ms": 100
+  }
+}

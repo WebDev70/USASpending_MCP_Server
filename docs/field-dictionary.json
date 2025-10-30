@@ -1,0 +1,387 @@
+{
+  "version": "1.0",
+  "title": "Field Dictionary - Data Definitions",
+  "description": "Complete definitions of all API response fields with types, meanings, and examples",
+  "last_updated": "2025-10-30",
+  "spending_over_time_fields": {
+    "time_period": {
+      "type": "object",
+      "description": "Time period identifier - structure varies by grouping type",
+      "sub_fields": {
+        "fiscal_year": {
+          "type": "string",
+          "format": "YYYY",
+          "example": "2024",
+          "meaning": "US Fiscal Year (Oct 1, 2023 - Sep 30, 2024)",
+          "present_when": "Grouping by fiscal_year"
+        },
+        "calendar_year": {
+          "type": "string",
+          "format": "YYYY",
+          "example": "2024",
+          "meaning": "Calendar year (Jan 1 - Dec 31)",
+          "present_when": "Grouping by calendar_year"
+        },
+        "quarter": {
+          "type": "string",
+          "format": "Q#",
+          "example": "Q1",
+          "meaning": "Quarter within year (Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec)",
+          "present_when": "Grouping by quarter"
+        },
+        "month": {
+          "type": "string",
+          "format": "YYYY-MM",
+          "example": "2024-01",
+          "meaning": "Month in YYYY-MM format",
+          "present_when": "Grouping by month"
+        }
+      }
+    },
+    "aggregated_amount": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 4944600129886.14,
+      "display_format": "$4,944.60B",
+      "meaning": "Total federal spending for the period",
+      "calculation": "Sum of all obligations in the period",
+      "precision": "2 decimal places (cents)",
+      "null_handling": "Never null"
+    },
+    "Contract_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 740223668362.77,
+      "display_format": "$740.22B",
+      "meaning": "Total obligations from federal contracts (award type B)",
+      "category": "obligation_type",
+      "includes": "BPAs, IDCs, and standard contracts",
+      "null_handling": "Can be 0 if no contracts in period"
+    },
+    "Direct_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 2941934320606.32,
+      "display_format": "$2,941.93B",
+      "meaning": "Direct federal obligations (government employee salaries, operations, benefits)",
+      "category": "obligation_type",
+      "largest_category": "Usually the largest spending category",
+      "includes": "Personnel compensation, benefits, direct operations",
+      "null_handling": "Can be 0 if no direct obligations"
+    },
+    "Grant_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 1209751429435.39,
+      "display_format": "$1,209.75B",
+      "meaning": "Total grant obligations (award type C)",
+      "category": "obligation_type",
+      "includes": "Federal grants to states, organizations, individuals",
+      "null_handling": "Can be 0 if no grants in period"
+    },
+    "Idv_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 15433574543.66,
+      "display_format": "$15.43B",
+      "meaning": "Indefinite Delivery Vehicle (IDV) obligations",
+      "category": "obligation_type",
+      "what_is_idv": "Contracts that represent vehicle not executed work - actual spending is in subawards",
+      "null_handling": "Can be 0 if no IDVs"
+    },
+    "Loan_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": -1654083765.96,
+      "display_format": "$-1.65B",
+      "meaning": "Federal loan obligations and guarantees",
+      "category": "obligation_type",
+      "can_be_negative": "Negative values indicate loan subsidies or reversals",
+      "null_handling": "Can be 0 or negative"
+    },
+    "Other_Obligations": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 38911220703.96,
+      "display_format": "$38.91B",
+      "meaning": "Other federal obligations not in above categories",
+      "category": "obligation_type",
+      "includes": "Cooperative agreements, payments, subsidies",
+      "null_handling": "Can be 0"
+    }
+  },
+  "spending_by_award_fields": {
+    "Award_ID": {
+      "type": "string",
+      "example": "W91ZRU25FA004",
+      "meaning": "Unique identifier for the federal award",
+      "format": "Alphanumeric, variable length",
+      "note": "Some masked IDs (starting with ZZ) indicate test/incomplete data",
+      "usage": "Primary key for detailed award lookups"
+    },
+    "Recipient_Name": {
+      "type": "string",
+      "example": "DELL FEDERAL SYSTEMS L.P",
+      "meaning": "Legal name of contractor/grantee receiving the award",
+      "format": "ALL CAPS (as in USASpending database)",
+      "note": "Must match exact case for lookups"
+    },
+    "Award_Amount": {
+      "type": "number",
+      "format": "currency",
+      "example": 20960,
+      "display_format": "$20.96K",
+      "meaning": "Initial award amount",
+      "calculation": "Not necessarily the same as total obligation",
+      "note": "Can increase with modifications/amendments"
+    },
+    "Award_Type": {
+      "type": "string",
+      "enum": ["Contract", "Grant", "Loan", "Cooperative Agreement", null],
+      "example": "Contract",
+      "meaning": "Category of federal award",
+      "note": "Can be null in some results",
+      "valid_values": "Contract, Grant, Loan, IDV, Cooperative Agreement, Payment, Subsidy"
+    },
+    "Description": {
+      "type": "string",
+      "example": "CONSOLIDATED PURCHASE OF DELL PRO 16 PLUS NOTEBOOKS",
+      "meaning": "Brief description of the award purpose",
+      "format": "Free text, often all caps",
+      "length": "Typically 10-500 characters",
+      "note": "May be truncated in display"
+    },
+    "Agency_Name": {
+      "type": "string",
+      "example": "Department of Defense",
+      "meaning": "Federal agency awarding the contract/grant",
+      "format": "Full official agency name"
+    },
+    "Action_Date": {
+      "type": "string",
+      "format": "YYYY-MM-DD",
+      "example": "2025-02-15",
+      "meaning": "Most recent action date on the award",
+      "note": "Updates when awards are modified or amended"
+    },
+    "DUNS_Number": {
+      "type": "string",
+      "format": "9 digits",
+      "example": "123456789",
+      "meaning": "Data Universal Numbering System identifier for recipient",
+      "null_handling": "Can be null for some recipients",
+      "usage": "Used to identify and group contractors"
+    },
+    "generated_internal_id": {
+      "type": "string",
+      "example": "CONT_AWD_W91ZRU25FA004_9700_W52P1J19D0049_9700",
+      "meaning": "Internal USASpending unique identifier",
+      "usage": "Used to construct USASpending.gov URLs"
+    }
+  },
+  "spending_by_geography_fields": {
+    "shape_code": {
+      "type": "string",
+      "example": "CA",
+      "meaning": "Geographic identifier",
+      "format": "Depends on geo_layer: state=2-letter abbrev, county=FIPS code, etc."
+    },
+    "display_name": {
+      "type": "string",
+      "example": "California",
+      "meaning": "Human-readable geographic location name"
+    },
+    "aggregated_amount": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 450000000000,
+      "display_format": "$450.00B",
+      "meaning": "Total federal spending in this geographic area",
+      "varies_by": "time period, agency, award type in filters"
+    },
+    "per_capita": {
+      "type": "number",
+      "format": "currency",
+      "example": 12340.50,
+      "meaning": "Federal spending per resident",
+      "calculation": "aggregated_amount / population",
+      "null_handling": "Null if population data unavailable",
+      "usage": "Compare spending intensity across regions"
+    },
+    "population": {
+      "type": "number",
+      "example": 39000000,
+      "meaning": "Population of geographic area",
+      "source": "US Census Bureau",
+      "null_handling": "Null if not available"
+    }
+  },
+  "spending_by_category_fields": {
+    "id": {
+      "type": "number",
+      "example": 334111,
+      "meaning": "Database ID or code for the category",
+      "varies_by": "What type of category (NAICS ID, PSC code, etc.)"
+    },
+    "name": {
+      "type": "string",
+      "example": "Electronic Computers Manufacturing",
+      "meaning": "Human-readable category name",
+      "null_handling": "Can be null in some cases"
+    },
+    "code": {
+      "type": "string",
+      "example": "334111",
+      "meaning": "Standardized code for the category",
+      "format": "6-digit NAICS, 4-digit PSC, etc. depending on category type",
+      "null_handling": "Can be null if not applicable"
+    },
+    "amount": {
+      "type": "number",
+      "format": "currency (cents)",
+      "example": 125000000000,
+      "display_format": "$125.00B",
+      "meaning": "Total federal spending in this category",
+      "sorting": "Results sorted by amount descending"
+    }
+  },
+  "recipient_fields": {
+    "recipient_id": {
+      "type": "string",
+      "example": "123456789",
+      "meaning": "DUNS number or unique recipient identifier",
+      "format": "9 digits for DUNS"
+    },
+    "recipient_name": {
+      "type": "string",
+      "example": "LOCKHEED MARTIN CORPORATION",
+      "meaning": "Legal business name of award recipient",
+      "format": "ALL CAPS (as in database)"
+    },
+    "recipient_name_unique": {
+      "type": "string",
+      "meaning": "Standardized/normalized recipient name for matching",
+      "null_handling": "Can be null"
+    },
+    "recipient_address": {
+      "type": "string",
+      "example": "123 Main Street, Arlington, VA 22202",
+      "meaning": "Primary business address"
+    },
+    "recipient_state": {
+      "type": "string",
+      "format": "2-letter state code",
+      "example": "VA",
+      "meaning": "State where recipient is headquartered"
+    },
+    "total_obligated_amount": {
+      "type": "number",
+      "format": "currency (cents)",
+      "meaning": "Total dollars awarded to recipient across all awards",
+      "calculation": "Sum of all awards to this recipient"
+    },
+    "award_count": {
+      "type": "number",
+      "example": 25,
+      "meaning": "Number of federal awards received by recipient"
+    }
+  },
+  "time_result_fields": {
+    "description": "Fields returned in TimeResult objects from spending_over_time endpoint",
+    "structure": "Contains time_period object + all obligation types + optional outlay types",
+    "fields": {
+      "time_period": "See time_period_fields above",
+      "aggregated_amount": "See aggregated_amount above",
+      "Contract_Obligations": "See Contract_Obligations above",
+      "Direct_Obligations": "See Direct_Obligations above",
+      "Grant_Obligations": "See Grant_Obligations above",
+      "Idv_Obligations": "See Idv_Obligations above",
+      "Loan_Obligations": "See Loan_Obligations above",
+      "Other_Obligations": "See Other_Obligations above",
+      "total_outlays": {
+        "type": "number (nullable)",
+        "meaning": "Total actual cash disbursements",
+        "null_when": "spending_level = 'transactions' (default)"
+      }
+    }
+  },
+  "null_handling_guide": {
+    "policy": "Some fields can be null. Always check before using.",
+    "common_null_scenarios": {
+      "Award_Type_null": "When award type cannot be determined from data",
+      "description_null": "When no description is provided",
+      "per_capita_null": "When population data unavailable",
+      "outlay_fields_null": "When spending_level='transactions' (default)"
+    },
+    "safe_operations": [
+      "Always use null coalescing operators (field ?? 0)",
+      "Check type before arithmetic operations",
+      "Provide defaults for display (N/A, $0, etc.)"
+    ]
+  },
+  "data_type_conversions": {
+    "currency_to_display": {
+      "rule": "Divide by 1e9 for billions, 1e6 for millions, 1e3 for thousands",
+      "examples": [
+        {
+          "raw": 4944600129886.14,
+          "displayed": "$4,944.60B",
+          "calculation": "4944600129886.14 / 1e9 = 4944.60"
+        },
+        {
+          "raw": 740223668362.77,
+          "displayed": "$740.22B",
+          "calculation": "740223668362.77 / 1e9 = 740.22"
+        },
+        {
+          "raw": 20960,
+          "displayed": "$20.96K",
+          "calculation": "20960 / 1e3 = 20.96"
+        }
+      ]
+    },
+    "percentage_calculation": {
+      "rule": "(current - previous) / previous * 100",
+      "example": {
+        "fy24_contracts": 740223668362.77,
+        "fy25_contracts": 623818137458.88,
+        "change_pct": "((623818137458.88 - 740223668362.77) / 740223668362.77) * 100 = -15.73%"
+      }
+    }
+  },
+  "field_relationships": [
+    {
+      "relationship": "Amount Aggregation",
+      "description": "aggregated_amount = sum(Contract_Obligations + Direct_Obligations + Grant_Obligations + Idv_Obligations + Loan_Obligations + Other_Obligations)",
+      "note": "May not be exactly equal due to rounding"
+    },
+    {
+      "relationship": "Geographic Hierarchy",
+      "description": "country contains countries, which contain states, which contain counties",
+      "implication": "State spending is sum of county spending within that state"
+    },
+    {
+      "relationship": "Award Type to Code",
+      "description": "Award_Type is human name, Award_Type_Code is system code (A/B/C/D, etc.)",
+      "mapping": "B=Contract, C=Grant, D=Loan, A=IDC"
+    },
+    {
+      "relationship": "Recipient to Award",
+      "description": "recipient_name appears in multiple Award records",
+      "calculation": "Sum of Award_Amount by recipient_name = total_obligated_amount"
+    }
+  ],
+  "aggregation_notes": {
+    "spending_over_time": "Results aggregated by selected time period. Do not sum across periods manually.",
+    "spending_by_award": "Each row is a separate award. Sum to get totals.",
+    "spending_by_category": "Results already aggregated at category level. Do not multiply.",
+    "spending_by_geography": "Results aggregated by geographic area. Sub-areas are not automatically included."
+  },
+  "common_queries_about_fields": {
+    "why_is_award_amount_different_from_obligation": "Award amount is initial contract value. Obligations can increase with amendments and modifications.",
+    "why_are_loan_obligations_negative": "Negative loans represent loan subsidies or cancellations.",
+    "why_is_idv_amount_listed": "IDVs are contract vehicles, not actual work. Actual spending is in subawards.",
+    "what_is_difference_between_aggregated_and_sum": "aggregated_amount is provided by API. Sum of components should be similar due to rounding.",
+    "can_per_capita_be_higher_than_aggregated": "No. per_capita = aggregated / population, so it's always derived from aggregated."
+  }
+}

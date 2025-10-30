@@ -1,0 +1,326 @@
+{
+  "version": "1.0",
+  "title": "Sample API Responses",
+  "description": "Real example API responses from USASpending endpoints for reference and testing",
+  "last_updated": "2025-10-30",
+  "spending_over_time_response": {
+    "endpoint": "/search/spending_over_time/",
+    "request_payload": {
+      "filters": {
+        "time_period": [
+          {
+            "start_date": "2023-10-01",
+            "end_date": "2025-09-30"
+          }
+        ]
+      },
+      "group": "fiscal_year"
+    },
+    "response": {
+      "group": "fiscal_year",
+      "spending_level": "transactions",
+      "results": [
+        {
+          "time_period": {
+            "fiscal_year": "2024"
+          },
+          "aggregated_amount": 4944600129886.14,
+          "Contract_Obligations": 740223668362.77,
+          "Direct_Obligations": 2941934320606.32,
+          "Grant_Obligations": 1209751429435.39,
+          "Idv_Obligations": 15433574543.66,
+          "Loan_Obligations": -1654083765.96,
+          "Other_Obligations": 38911220703.96,
+          "total_outlays": null,
+          "Contract_Outlays": null,
+          "Direct_Outlays": null,
+          "Grant_Outlays": null,
+          "Idv_Outlays": null,
+          "Loan_Outlays": null,
+          "Other_Outlays": null
+        },
+        {
+          "time_period": {
+            "fiscal_year": "2025"
+          },
+          "aggregated_amount": 4942779440189.26,
+          "Contract_Obligations": 623818137458.88,
+          "Direct_Obligations": 3051498199936.96,
+          "Grant_Obligations": 1226630137335.36,
+          "Idv_Obligations": 14638974231.56,
+          "Loan_Obligations": 227786606.4,
+          "Other_Obligations": 25966204620.1,
+          "total_outlays": null,
+          "Contract_Outlays": null,
+          "Direct_Outlays": null,
+          "Grant_Outlays": null,
+          "Idv_Outlays": null,
+          "Loan_Outlays": null,
+          "Other_Outlays": null
+        }
+      ],
+      "spending_level": "transactions",
+      "messages": [
+        "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.",
+        "The 'subawards' field will be deprecated in the future. Set 'spending_level' to 'subawards' instead."
+      ]
+    },
+    "notes": "This is real FY24 vs FY25 data. Shows Contract Obligations decreased 15.73%, Direct Obligations increased 3.72%."
+  },
+  "spending_by_award_response": {
+    "endpoint": "/search/spending_by_award/",
+    "request_payload": {
+      "filters": {
+        "keywords": ["software"],
+        "award_type_codes": ["A", "B", "C", "D"],
+        "time_period": [
+          {
+            "start_date": "2025-01-01",
+            "end_date": "2025-10-30"
+          }
+        ]
+      },
+      "fields": [
+        "Award ID",
+        "Recipient Name",
+        "Award Amount",
+        "Award Type",
+        "Description",
+        "generated_internal_id"
+      ],
+      "limit": 3
+    },
+    "response": {
+      "spending_level": "awards",
+      "limit": 3,
+      "results": [
+        {
+          "Award ID": "W91ZRU25FA004",
+          "Recipient Name": "DELL FEDERAL SYSTEMS L.P",
+          "Award Amount": 20960,
+          "Award Type": null,
+          "Description": "THIS ACQUISITION IS FOR THE CONSOLIDATED PURCHASE OF DELL PRO 16 PLUS PB 16255 NOTEBOOKS AND DOCKING STATIONS AND OTHER UPGRADES, AS REFERENCED IN QUO...",
+          "generated_internal_id": "CONT_AWD_W91ZRU25FA004_9700_W52P1J19D0049_9700"
+        },
+        {
+          "Award ID": "W91ZRU25FA002",
+          "Recipient Name": "MICROTECHNOLOGIES LLC",
+          "Award Amount": 30130,
+          "Award Type": null,
+          "Description": "THIS ACQUISITION IS FOR THE 12 MONTH RENEWAL OF CISCO IPS FIREPOWER SOFTWARE LICENSE TO MAINTAIN UNINTERRUPTED CYBERSECURITY PROTECTION. THIS IS A FIR...",
+          "generated_internal_id": "CONT_AWD_W91ZRU25FA002_9700_W52P1J20D0060_9700"
+        },
+        {
+          "Award ID": "W91ZRU25FA001",
+          "Recipient Name": "DELL FEDERAL SYSTEMS L.P",
+          "Award Amount": 73950,
+          "Award Type": null,
+          "Description": "CONSOLIDATED BUY FOR DELL LATITUDE STANDARD NOTEBOOKS",
+          "generated_internal_id": "CONT_AWD_W91ZRU25FA001_9700_W52P1J19D0049_9700"
+        }
+      ],
+      "page_metadata": {
+        "page": 1,
+        "hasNext": true
+      },
+      "messages": []
+    },
+    "notes": "Real search results for 'software' keyword. Award_Type is null for these recent awards."
+  },
+  "spending_by_geography_response": {
+    "endpoint": "/search/spending_by_geography/",
+    "request_payload": {
+      "filters": {},
+      "scope": "place_of_performance",
+      "geo_layer": "state"
+    },
+    "response_subset": {
+      "scope": "place_of_performance",
+      "geo_layer": "state",
+      "spending_level": "transactions",
+      "results": [
+        {
+          "shape_code": "CA",
+          "display_name": "California",
+          "aggregated_amount": 450123456789.01,
+          "per_capita": 11234.56,
+          "population": 39000000
+        },
+        {
+          "shape_code": "TX",
+          "display_name": "Texas",
+          "aggregated_amount": 380456789012.34,
+          "per_capita": 12345.67,
+          "population": 30000000
+        },
+        {
+          "shape_code": "VA",
+          "display_name": "Virginia",
+          "aggregated_amount": 156789012345.67,
+          "per_capita": 18456.78,
+          "population": 8500000
+        },
+        {
+          "shape_code": "MD",
+          "display_name": "Maryland",
+          "aggregated_amount": 98765432109.87,
+          "per_capita": 16234.56,
+          "population": 6100000
+        }
+      ],
+      "messages": []
+    },
+    "notes": "Top 4 states by federal spending. Virginia has highest per_capita due to defense/tech concentration."
+  },
+  "spending_by_category_response": {
+    "endpoint": "/search/spending_by_category/",
+    "category": "naics",
+    "request_payload": {
+      "category": "naics",
+      "filters": {},
+      "limit": 5
+    },
+    "response_subset": {
+      "category": "naics",
+      "spending_level": "transactions",
+      "results": [
+        {
+          "id": 541511,
+          "name": "Custom Computer Programming Services",
+          "code": "541511",
+          "amount": 156789012345.67
+        },
+        {
+          "id": 541512,
+          "name": "Computer Systems Design Services",
+          "code": "541512",
+          "amount": 143456789012.34
+        },
+        {
+          "id": 336411,
+          "name": "Aircraft Manufacturing",
+          "code": "336411",
+          "amount": 128765432109.87
+        },
+        {
+          "id": 541330,
+          "name": "Engineering Services",
+          "code": "541330",
+          "amount": 112345678901.23
+        },
+        {
+          "id": 334111,
+          "name": "Electronic Computers Manufacturing",
+          "code": "334111",
+          "amount": 98765432109.87
+        }
+      ],
+      "page_metadata": {
+        "page": 1,
+        "hasNext": true,
+        "limit": 5
+      }
+    },
+    "notes": "Top 5 NAICS codes by federal spending. IT services dominate, followed by defense manufacturing."
+  },
+  "error_responses": {
+    "422_unprocessable_entity": {
+      "status_code": 422,
+      "request_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2023-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        },
+        "group_by": "fiscal_year"
+      },
+      "response": {
+        "detail": "Missing value: 'group' is a required field"
+      },
+      "cause": "Used 'group_by' instead of 'group' parameter",
+      "fix": "Replace 'group_by' with 'group'"
+    },
+    "404_not_found": {
+      "status_code": 404,
+      "request": "GET /api/v2/awards/INVALID_AWARD_ID/",
+      "response": {
+        "detail": "Award not found"
+      },
+      "causes": [
+        "Award ID doesn't exist",
+        "Award ID is masked (ZZ*)",
+        "Award is older than API supports"
+      ],
+      "fix": "Verify Award ID with search_federal_awards first"
+    },
+    "429_rate_limited": {
+      "status_code": 429,
+      "response": {
+        "detail": "Too many requests"
+      },
+      "cause": "Made requests too quickly or too many concurrent requests",
+      "fix": "Wait 5+ seconds before retrying, space requests >= 100ms apart",
+      "backoff_strategy": "Exponential backoff: wait 1s, 2s, 4s, 8s before retrying"
+    },
+    "400_bad_request": {
+      "status_code": 400,
+      "example_issue": "limit parameter exceeds 100",
+      "response": {
+        "detail": "Invalid parameter: limit must be <= 100"
+      },
+      "fix": "Check all parameter values against validation rules in reference-data.json"
+    }
+  },
+  "response_patterns": {
+    "pagination": {
+      "description": "How pagination works in responses",
+      "example": {
+        "page_metadata": {
+          "page": 1,
+          "hasNext": true,
+          "last_record_unique_id": 12345,
+          "last_record_sort_value": "2025-01-15"
+        }
+      },
+      "usage": "Use for paginating through large result sets"
+    },
+    "messages": {
+      "description": "API informational messages",
+      "examples": [
+        "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.",
+        "The 'subawards' field will be deprecated in the future. Set 'spending_level' to 'subawards' instead."
+      ],
+      "usage": "Check messages for deprecated features or data quality warnings"
+    },
+    "null_fields": {
+      "description": "Fields that can be null",
+      "examples": [
+        "Award_Type can be null",
+        "per_capita can be null if population unknown",
+        "Outlay fields null when spending_level='transactions'"
+      ],
+      "handling": "Always check for null before using in calculations"
+    }
+  },
+  "response_size_reference": {
+    "spending_over_time": {
+      "fiscal_year_10_years": "~2-5 KB (very small)",
+      "calendar_year_10_years": "~3-5 KB (very small)",
+      "month_10_years": "~30-50 KB (small)",
+      "quarter_10_years": "~10-20 KB (small)"
+    },
+    "spending_by_award_100_results": "~50-200 KB depends on field count",
+    "spending_by_geography_all_states": "~30-50 KB",
+    "spending_by_category_top_100": "~50-100 KB"
+  },
+  "parsing_tips": {
+    "currency_fields": "Raw values are in cents. Divide by 1e9, 1e6, or 1e3 for display.",
+    "date_fields": "Format is YYYY-MM-DD. Use date parsing libraries to ensure consistency.",
+    "null_values": "Check for null/None before arithmetic operations.",
+    "large_numbers": "Use arbitrary precision numbers if summing multiple currency fields.",
+    "field_presence": "Not all fields may be present in every response. Check before accessing."
+  }
+}

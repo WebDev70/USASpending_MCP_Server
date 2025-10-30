@@ -1,0 +1,516 @@
+{
+  "version": "2.0",
+  "title": "USASpending API v2 Specification",
+  "base_url": "https://api.usaspending.gov/api/v2",
+  "description": "Official USASpending.gov API specification for federal spending data queries",
+  "last_updated": "2025-10-30",
+  "documentation_url": "https://github.com/fedspendingtransparency/usaspending-api",
+  "endpoints": {
+    "/search/spending_by_award/": {
+      "name": "Search Spending by Award",
+      "method": "POST",
+      "description": "Search and retrieve federal awards using advanced filtering",
+      "use_case": "Find specific contracts, grants, loans with detailed information",
+      "request": {
+        "required": {
+          "filters": {
+            "type": "AdvancedFilterObject",
+            "description": "Complex filtering criteria"
+          },
+          "fields": {
+            "type": "array[string]",
+            "description": "Specify which data elements to return"
+          }
+        },
+        "optional": {
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "default": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": ["asc", "desc"],
+            "default": "desc"
+          },
+          "sort": {
+            "type": "string",
+            "description": "Field name for sorting"
+          },
+          "spending_level": {
+            "type": "string",
+            "enum": ["awards", "subawards"],
+            "default": "awards"
+          }
+        }
+      },
+      "response": {
+        "spending_level": "enum",
+        "limit": "number",
+        "results": "array[SpendingByAwardResponse]",
+        "page_metadata": {
+          "page": "number",
+          "hasNext": "boolean"
+        }
+      },
+      "example_payload": {
+        "filters": {
+          "keywords": ["software"],
+          "agencies": ["Department of Defense"],
+          "time_period": [
+            {
+              "start_date": "2024-01-01",
+              "end_date": "2024-12-31"
+            }
+          ]
+        },
+        "fields": ["Award ID", "Recipient Name", "Award Amount"],
+        "limit": 10
+      },
+      "performance": {
+        "typical_response_ms": "150-500",
+        "typical_results": "10-100"
+      }
+    },
+    "/search/spending_over_time/": {
+      "name": "Spending Over Time",
+      "method": "POST",
+      "description": "Track spending trends across time periods",
+      "use_case": "Analyze FY25 vs FY24 spending, identify trends",
+      "request": {
+        "required": {
+          "group": {
+            "type": "string",
+            "enum": ["calendar_year", "fiscal_year", "quarter", "month"],
+            "description": "Time period aggregation"
+          }
+        },
+        "optional": {
+          "filters": {
+            "type": "AdvancedFilterObject",
+            "description": "Filtering criteria"
+          },
+          "spending_level": {
+            "type": "string",
+            "enum": ["transactions", "awards", "subawards"],
+            "default": "transactions"
+          }
+        }
+      },
+      "response": {
+        "group": "string",
+        "spending_level": "string",
+        "results": "array[TimeResult]"
+      },
+      "response_fields": {
+        "time_period": {
+          "fiscal_year": "string (only when grouping by fiscal year)",
+          "calendar_year": "string (only when grouping by calendar year)",
+          "quarter": "string (optional)",
+          "month": "string (optional)"
+        },
+        "aggregated_amount": "number",
+        "Contract_Obligations": "number",
+        "Direct_Obligations": "number",
+        "Grant_Obligations": "number",
+        "Idv_Obligations": "number",
+        "Loan_Obligations": "number",
+        "Other_Obligations": "number"
+      },
+      "example_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2023-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        },
+        "group": "fiscal_year"
+      },
+      "example_response": {
+        "results": [
+          {
+            "time_period": {
+              "fiscal_year": "2024"
+            },
+            "aggregated_amount": 4944600129886.14,
+            "Contract_Obligations": 740223668362.77,
+            "Direct_Obligations": 2941934320606.32
+          }
+        ]
+      },
+      "performance": {
+        "typical_response_ms": "300-1000"
+      },
+      "known_issues": [
+        "Parameter must be 'group' not 'group_by'",
+        "Response fields use underscores: total_spending, award_count, period",
+        "Time period field names vary by grouping type"
+      ]
+    },
+    "/search/spending_by_geography/": {
+      "name": "Spending by Geography",
+      "method": "POST",
+      "description": "Aggregate spending by geographic area",
+      "use_case": "Compare spending across states, counties, districts",
+      "request": {
+        "required": {
+          "filters": {
+            "type": "AdvancedFilterObject"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["place_of_performance", "recipient_location"]
+          },
+          "geo_layer": {
+            "type": "string",
+            "enum": ["state", "county", "district", "country"]
+          }
+        },
+        "optional": {
+          "geo_layer_filters": {
+            "type": "array[string]",
+            "description": "Specific state/county/district codes"
+          }
+        }
+      },
+      "response": {
+        "scope": "string",
+        "geo_layer": "string",
+        "results": "array[GeographyTypeResult]"
+      },
+      "response_fields": {
+        "shape_code": "string",
+        "display_name": "string",
+        "aggregated_amount": "number",
+        "per_capita": "number (nullable)"
+      },
+      "example_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2024-01-01",
+              "end_date": "2024-12-31"
+            }
+          ]
+        },
+        "scope": "place_of_performance",
+        "geo_layer": "state"
+      },
+      "performance": {
+        "typical_response_ms": "200-800"
+      }
+    },
+    "/search/spending_by_category/": {
+      "name": "Spending by Category",
+      "method": "POST",
+      "description": "Aggregate spending by classification dimension",
+      "use_case": "Analyze spending by NAICS codes, PSC codes, agency, state, etc.",
+      "request": {
+        "required": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "awarding_agency",
+              "awarding_subagency",
+              "cfda",
+              "country",
+              "county",
+              "defc",
+              "district",
+              "federal_account",
+              "funding_agency",
+              "funding_subagency",
+              "naics",
+              "object_class",
+              "program_activity",
+              "psc",
+              "recipient_duns",
+              "recipient_parent_duns",
+              "state_territory",
+              "tas"
+            ]
+          },
+          "filters": {
+            "type": "AdvancedFilterObject"
+          }
+        },
+        "optional": {
+          "limit": {
+            "type": "integer",
+            "default": 50
+          },
+          "page": {
+            "type": "integer",
+            "default": 1
+          }
+        }
+      },
+      "response": {
+        "category": "string",
+        "results": "array[CategoryResult]"
+      },
+      "response_fields": {
+        "id": "number",
+        "name": "string",
+        "code": "string",
+        "amount": "number"
+      },
+      "example_payloads": {
+        "top_naics": {
+          "category": "naics",
+          "filters": {}
+        },
+        "top_psc": {
+          "category": "psc",
+          "filters": {}
+        }
+      },
+      "performance": {
+        "typical_response_ms": "150-600"
+      }
+    },
+    "/awards/{award_id}/": {
+      "name": "Award Details",
+      "method": "GET",
+      "description": "Get detailed information for a specific award",
+      "use_case": "Retrieve full award details including performance location, dates, etc.",
+      "path_parameters": {
+        "award_id": {
+          "type": "string",
+          "required": true,
+          "description": "Unique award identifier"
+        }
+      },
+      "response": {
+        "award_id": "string",
+        "recipient_name": "string",
+        "recipient_duns": "string",
+        "awarding_agency_name": "string",
+        "total_obligation": "number",
+        "description": "string",
+        "award_type_code": "string",
+        "place_of_performance": "string"
+      },
+      "performance": {
+        "typical_response_ms": "45-150"
+      }
+    },
+    "/recipients/": {
+      "name": "Recipients",
+      "method": "GET",
+      "description": "Get information about award recipients (contractors, grantees)",
+      "use_case": "Look up vendor/recipient details and spending history",
+      "query_parameters": {
+        "recipient_id": {
+          "type": "string",
+          "description": "DUNS or recipient ID"
+        },
+        "recipient_name": {
+          "type": "string",
+          "description": "Full legal name"
+        }
+      },
+      "response": {
+        "recipient_id": "string",
+        "recipient_name": "string",
+        "total_obligated_amount": "number",
+        "award_count": "number"
+      }
+    },
+    "/subawards/": {
+      "name": "Subawards",
+      "method": "GET",
+      "description": "Get information about subawards (subcontracts)",
+      "use_case": "Find subcontractor relationships and funding",
+      "response": {
+        "subaward_id": "string",
+        "prime_award_id": "string",
+        "subawardee_name": "string",
+        "amount": "number"
+      }
+    },
+    "/disaster/spending_by_award/": {
+      "name": "Disaster Spending",
+      "method": "POST",
+      "description": "Query emergency and disaster-related federal spending",
+      "use_case": "Find spending related to specific disasters or emergencies",
+      "request": {
+        "filters": {
+          "type": "AdvancedFilterObject"
+        }
+      },
+      "performance": {
+        "typical_response_ms": "200-700"
+      }
+    }
+  },
+  "common_filter_object": {
+    "AdvancedFilterObject": {
+      "description": "Complex filtering mechanism used across multiple endpoints",
+      "fields": {
+        "keywords": {
+          "type": "array[string]",
+          "description": "Keywords to search in descriptions and names"
+        },
+        "agencies": {
+          "type": "array[string] or array[{name: string, tier: string}]",
+          "description": "Agency names or codes. Can specify tier: 'toptier' or 'subtier'"
+        },
+        "award_type_codes": {
+          "type": "array[string]",
+          "enum": ["A", "B", "C", "D", "02-11"],
+          "description": "Type of award"
+        },
+        "time_period": {
+          "type": "array[{start_date, end_date}]",
+          "format": "YYYY-MM-DD",
+          "description": "Date range(s) for filtering"
+        },
+        "recipient": {
+          "type": "object",
+          "fields": {
+            "search": "string (recipient name)",
+            "location": "string (state/city)"
+          }
+        },
+        "award_amount_range": {
+          "type": "array[{lower_bound, upper_bound}]",
+          "description": "Filter by award amount range"
+        },
+        "naics_codes": {
+          "type": "array[string]",
+          "description": "Filter by NAICS industry codes"
+        },
+        "psc_codes": {
+          "type": "array[string]",
+          "description": "Filter by Product Service Codes"
+        },
+        "place_of_performance": {
+          "type": "object",
+          "fields": {
+            "state": "string",
+            "country": "string"
+          }
+        },
+        "domestic_or_foreign": {
+          "type": "string",
+          "enum": ["domestic", "foreign", "both"],
+          "default": "both"
+        }
+      }
+    }
+  },
+  "response_data_structures": {
+    "TimeResult": {
+      "description": "Temporal spending aggregation result",
+      "fields": {
+        "time_period": "TimePeriodGroup (see below)",
+        "aggregated_amount": "number (total spending)",
+        "obligation_fields": [
+          "Contract_Obligations",
+          "Direct_Obligations",
+          "Grant_Obligations",
+          "Idv_Obligations",
+          "Loan_Obligations",
+          "Other_Obligations"
+        ],
+        "outlay_fields": "Nullable - only when spending_level is awards"
+      }
+    },
+    "TimePeriodGroup": {
+      "description": "Time period identifier (fields vary by grouping type)",
+      "fields": {
+        "fiscal_year": "string (e.g., '2024')",
+        "calendar_year": "string (e.g., '2024')",
+        "quarter": "string (e.g., 'Q1', optional)",
+        "month": "string (e.g., '2024-01', optional)"
+      },
+      "note": "Only relevant fields returned based on group_by parameter"
+    },
+    "SpendingByAwardResponse": {
+      "description": "Award record from spending_by_award search",
+      "common_fields": [
+        "Award ID",
+        "Recipient Name",
+        "Award Amount",
+        "Award Type",
+        "Description",
+        "Agency Name",
+        "Action Date"
+      ]
+    },
+    "GeographyTypeResult": {
+      "description": "Geographic aggregation result",
+      "fields": {
+        "shape_code": "string",
+        "display_name": "string",
+        "aggregated_amount": "number",
+        "per_capita": "number (nullable)"
+      }
+    },
+    "CategoryResult": {
+      "description": "Category aggregation result",
+      "fields": {
+        "id": "number (database key)",
+        "name": "string",
+        "code": "string",
+        "amount": "number"
+      }
+    }
+  },
+  "error_handling": {
+    "422_unprocessable_entity": {
+      "common_causes": [
+        "Missing required parameter 'group' (using 'group_by' instead)",
+        "Invalid filter parameter format",
+        "Malformed date strings"
+      ],
+      "example": "POST /search/spending_over_time with filters only, missing 'group' parameter"
+    },
+    "400_bad_request": {
+      "common_causes": [
+        "Invalid query parameter format",
+        "Out of range values (e.g., limit > 100)",
+        "Invalid enum values"
+      ]
+    },
+    "404_not_found": {
+      "common_causes": [
+        "Award ID does not exist or is masked",
+        "Recipient ID not found"
+      ]
+    },
+    "429_rate_limited": {
+      "description": "Too many requests from IP",
+      "recommendation": "Wait 5+ seconds before retrying"
+    }
+  },
+  "rate_limits": {
+    "approximate_concurrent_requests": "10 per IP",
+    "recommended_spacing_between_requests_ms": 100,
+    "request_timeout_seconds": 30
+  },
+  "data_constraints": {
+    "earliest_date": "2007-10-01 (Oct 1, 2007)",
+    "earliest_date_for_bulk": "2000-10-01 (for bulk downloads only)",
+    "max_results_per_page": 100,
+    "default_results_per_page": 10
+  },
+  "best_practices": [
+    "Always include explicit date ranges for better performance",
+    "Use 'group' not 'group_by' in spending_over_time queries",
+    "Validate all enum values match documentation",
+    "Parse time_period response fields carefully - structure varies by group type",
+    "Cache responses when appropriate to avoid duplicate requests",
+    "Space requests at least 100ms apart to respect rate limits",
+    "Handle 422 errors by checking parameter names and values",
+    "Use specific field requests to reduce response size"
+  ]
+}

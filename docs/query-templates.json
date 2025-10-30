@@ -1,0 +1,432 @@
+{
+  "version": "1.0",
+  "title": "Query Templates - Pre-built Query Patterns",
+  "description": "Reusable API query structures for common analyses",
+  "last_updated": "2025-10-30",
+  "templates": {
+    "fy_trends_analysis": {
+      "name": "FY25 vs FY24 Spending Trends",
+      "description": "Compare federal spending between fiscal years",
+      "mcp_tool": "get_spending_trends",
+      "use_case": "Analyze FY25 vs FY24 spending with breakdown by obligation type",
+      "parameters": {
+        "period": "fiscal_year",
+        "agency": "",
+        "award_type": ""
+      },
+      "api_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2023-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        },
+        "group": "fiscal_year"
+      },
+      "response_fields_to_extract": [
+        "time_period.fiscal_year",
+        "aggregated_amount",
+        "Contract_Obligations",
+        "Direct_Obligations",
+        "Grant_Obligations",
+        "Idv_Obligations",
+        "Loan_Obligations",
+        "Other_Obligations"
+      ],
+      "data_transformation": "Calculate YoY change percentage for each obligation type",
+      "expected_results": [
+        "FY2024 total spending: ~$4.9 trillion",
+        "FY2025 total spending: ~$4.9 trillion",
+        "Show contract obligations decreased ~15.73%",
+        "Show direct obligations increased ~3.72%"
+      ]
+    },
+    "dod_spending_breakdown": {
+      "name": "Department of Defense Spending by NAICS Code",
+      "description": "Analyze DoD spending across industry categories",
+      "mcp_tool": "get_top_naics_breakdown",
+      "use_case": "Identify top industries receiving DoD contracts",
+      "api_payload": {
+        "category": "naics",
+        "filters": {
+          "agencies": [
+            {
+              "name": "Department of Defense",
+              "tier": "toptier"
+            }
+          ]
+        },
+        "limit": 20
+      },
+      "expected_top_results": [
+        "541511 - Custom Computer Programming Services",
+        "336411 - Aircraft Manufacturing",
+        "541512 - Computer Systems Design Services",
+        "541330 - Engineering Services"
+      ]
+    },
+    "top_contractors_by_state": {
+      "name": "Top Contractors in a Specific State",
+      "description": "Find largest contractors by spending in a state",
+      "mcp_tool": "search_federal_awards",
+      "use_case": "Identify major federal contractors in California, Texas, etc.",
+      "parameters_template": {
+        "query": "REPLACE_WITH_STATE_NAME",
+        "max_results": 50
+      },
+      "example_query": {
+        "state": "CA",
+        "query": "California",
+        "max_results": 50
+      },
+      "api_payload": {
+        "filters": {
+          "keywords": ["{state_name}"],
+          "place_of_performance": {
+            "state": "{state_code}"
+          }
+        },
+        "fields": [
+          "Award ID",
+          "Recipient Name",
+          "Award Amount",
+          "Award Type",
+          "Description"
+        ],
+        "limit": 50
+      },
+      "post_processing": "Group by recipient and sum amounts to get total spending by contractor"
+    },
+    "agency_spending_by_category": {
+      "name": "Agency Spending by Product/Service Category (PSC)",
+      "description": "Breakdown of an agency's spending by PSC codes",
+      "mcp_tool": "Multiple tools (get_agency_profile + search_by_category)",
+      "use_case": "Understand what types of goods/services an agency purchases",
+      "steps": [
+        {
+          "step": 1,
+          "tool": "get_agency_profile",
+          "params": {
+            "agency": "Department of Defense",
+            "detail_level": "detail"
+          }
+        },
+        {
+          "step": 2,
+          "tool": "query_api_directly",
+          "endpoint": "/search/spending_by_category/",
+          "payload": {
+            "category": "psc",
+            "filters": {
+              "agencies": [
+                {
+                  "name": "Department of Defense",
+                  "tier": "toptier"
+                }
+              ]
+            },
+            "limit": 30
+          }
+        }
+      ]
+    },
+    "disaster_funding_by_state": {
+      "name": "Disaster Funding by State",
+      "description": "Track emergency spending by state for specific disaster",
+      "mcp_tool": "get_disaster_funding",
+      "use_case": "Find federal disaster relief spending for hurricane, flood, etc.",
+      "parameters_template": {
+        "disaster_type": "hurricane",
+        "year": "2024",
+        "state": "REPLACE_WITH_STATE_CODE"
+      },
+      "example": {
+        "disaster_type": "hurricane",
+        "year": "2024",
+        "state": "TX"
+      },
+      "api_payload": {
+        "filters": {
+          "keywords": ["disaster", "emergency", "relief"],
+          "place_of_performance": {
+            "state": "{state_code}"
+          },
+          "time_period": [
+            {
+              "start_date": "{year}-01-01",
+              "end_date": "{year}-12-31"
+            }
+          ]
+        }
+      }
+    },
+    "contract_vs_grant_analysis": {
+      "name": "Contract vs Grant Analysis",
+      "description": "Compare contract spending vs grant spending",
+      "mcp_tool": "get_spending_trends with multiple award types",
+      "use_case": "Understand procurement strategy (contracts vs grants)",
+      "api_payload_contracts": {
+        "filters": {
+          "award_type_codes": ["A", "B"],
+          "time_period": [
+            {
+              "start_date": "2023-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        },
+        "group": "fiscal_year"
+      },
+      "api_payload_grants": {
+        "filters": {
+          "award_type_codes": ["C", "03"],
+          "time_period": [
+            {
+              "start_date": "2023-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        },
+        "group": "fiscal_year"
+      },
+      "post_processing": "Calculate ratio of contracts to grants and trend over time"
+    },
+    "small_business_spending": {
+      "name": "Small Business Federal Spending",
+      "description": "Federal spending with small business contractors",
+      "mcp_tool": "analyze_small_business",
+      "use_case": "Track SBA set-asides and small business awards",
+      "parameters": {
+        "sb_type": "small_business",
+        "agency": ""
+      },
+      "api_payload": {
+        "filters": {
+          "recipient": {
+            "type": "small_business"
+          }
+        }
+      },
+      "note": "Requires special recipient type filtering"
+    },
+    "vendor_relationship_mapping": {
+      "name": "Prime Contractor to Subcontractor Relationships",
+      "description": "Map prime contractor to subcontractor funding flows",
+      "mcp_tool": "get_subaward_data",
+      "use_case": "Understand supply chain and contractor relationships",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Search for major prime contracts",
+          "tool": "search_federal_awards",
+          "params": {
+            "query": "prime contractor name or award ID",
+            "max_results": 10
+          }
+        },
+        {
+          "step": 2,
+          "description": "Get subaward details for each prime award",
+          "tool": "get_subaward_data",
+          "params": {
+            "award_id": "PRIME_AWARD_ID",
+            "max_results": 50
+          }
+        }
+      ],
+      "api_payload": {
+        "filters": {
+          "keywords": ["{prime_contractor_name}"]
+        },
+        "spending_level": "subawards"
+      }
+    },
+    "geographic_spending_heatmap": {
+      "name": "Federal Spending by State (Heatmap Data)",
+      "description": "Get spending aggregated by state for visualization",
+      "mcp_tool": "get_spending_by_state",
+      "use_case": "Create geographic heat map of federal spending",
+      "api_payload": {
+        "filters": {},
+        "scope": "place_of_performance",
+        "geo_layer": "state"
+      },
+      "response_fields": [
+        "shape_code (state abbreviation)",
+        "display_name (state name)",
+        "aggregated_amount (total spending)",
+        "per_capita (spending per person)"
+      ],
+      "visualization_hint": "Color by aggregated_amount, size by population"
+    },
+    "budget_function_trends": {
+      "name": "Federal Budget Function Spending Trends",
+      "description": "Track spending by major budget functions over time",
+      "mcp_tool": "get_budget_functions",
+      "use_case": "Understand spending priorities (defense vs social vs other)",
+      "api_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2020-10-01",
+              "end_date": "2025-09-30"
+            }
+          ]
+        }
+      },
+      "expected_breakdown": [
+        "050 - National Defense (largest)",
+        "600 - Medicare",
+        "650 - Social Security",
+        "500 - Education/Training/Employment",
+        "550 - Health"
+      ]
+    },
+    "agency_vendor_concentration": {
+      "name": "Top Vendors for Specific Agency",
+      "description": "Identify top contractors for an agency",
+      "mcp_tool": "search_federal_awards",
+      "use_case": "Find major vendors working for specific agencies",
+      "parameters_template": {
+        "agency": "AGENCY_NAME",
+        "top_n": 20
+      },
+      "example": {
+        "agency": "NASA",
+        "max_results": 50
+      },
+      "api_payload": {
+        "filters": {
+          "agencies": [
+            {
+              "name": "{agency_name}",
+              "tier": "toptier"
+            }
+          ]
+        },
+        "fields": [
+          "Award ID",
+          "Recipient Name",
+          "Award Amount",
+          "Award Type"
+        ],
+        "limit": 50
+      },
+      "post_processing": "Group by recipient, sum amounts, sort by total descending"
+    },
+    "award_search_by_criteria": {
+      "name": "Advanced Award Search",
+      "description": "Search awards using multiple filter criteria",
+      "mcp_tool": "search_federal_awards",
+      "example_scenarios": {
+        "software_contracts_over_1m": {
+          "description": "Software development contracts over $1M in 2024",
+          "query": "software development",
+          "filters": {
+            "award_type_codes": ["B"],
+            "award_amount_range": {
+              "lower_bound": 1000000,
+              "upper_bound": null
+            },
+            "time_period": [
+              {
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31"
+              }
+            ]
+          }
+        },
+        "healthcare_grants": {
+          "description": "Healthcare grants from HHS",
+          "query": "healthcare",
+          "filters": {
+            "agencies": [
+              {
+                "name": "Department of Health and Human Services",
+                "tier": "toptier"
+              }
+            ],
+            "award_type_codes": ["C", "03"],
+            "time_period": [
+              {
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31"
+              }
+            ]
+          }
+        },
+        "construction_contracts_california": {
+          "description": "Construction contracts in California",
+          "query": "construction",
+          "filters": {
+            "award_type_codes": ["B"],
+            "place_of_performance": {
+              "state": "CA"
+            },
+            "psc_codes": ["238910"]
+          }
+        }
+      }
+    },
+    "object_class_analysis": {
+      "name": "Spending by Budget Object Class",
+      "description": "Analyze how money is spent (salaries vs equipment vs supplies)",
+      "mcp_tool": "get_object_class_analysis",
+      "use_case": "Understand spending composition (personnel vs operational costs)",
+      "api_payload": {
+        "filters": {
+          "agencies": [
+            {
+              "name": "Department of Defense",
+              "tier": "toptier"
+            }
+          ]
+        }
+      },
+      "expected_breakdown": [
+        "1000 - Personnel Compensation (largest)",
+        "2000 - Contractual Services",
+        "4000 - Equipment",
+        "3000 - Supplies & Materials"
+      ]
+    },
+    "year_over_year_comparison": {
+      "name": "Year-over-Year Spending Comparison",
+      "description": "Compare spending metrics across consecutive periods",
+      "mcp_tool": "get_spending_trends",
+      "use_case": "Track spending growth or decline by period",
+      "api_payload": {
+        "filters": {
+          "time_period": [
+            {
+              "start_date": "2020-01-01",
+              "end_date": "2025-12-31"
+            }
+          ]
+        },
+        "group": "calendar_year"
+      },
+      "calculation": "For each year, calculate (current_year - previous_year) / previous_year * 100"
+    }
+  },
+  "template_usage_guide": {
+    "how_to_use": "Each template shows the API payload structure and MCP tool to use. Copy the payload and substitute placeholder values marked with {braces}.",
+    "common_substitutions": {
+      "{state_name}": "Full state name (e.g., California, Texas)",
+      "{state_code}": "Two-letter state abbreviation (e.g., CA, TX)",
+      "{agency_name}": "Full federal agency name (e.g., Department of Defense)",
+      "{year}": "Four-digit year (e.g., 2024)",
+      "{prime_award_id}": "Award ID from prime contract search",
+      "{contractor_name}": "Exact contractor name from USASpending database"
+    },
+    "tips": [
+      "Always include time_period filters for better performance",
+      "Use specific agency names (not abbreviations) in API calls",
+      "Limit results to what you need (max 100 per query)",
+      "Group by date ranges for trend analysis",
+      "Post-process results to aggregate by recipient, NAICS, PSC, etc."
+    ]
+  }
+}
