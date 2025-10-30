@@ -182,17 +182,17 @@ def start_mcp_server(venv_path: str = ".venv", verbose: bool = True) -> subproce
         print(f"\n3. Starting MCP server...")
 
     try:
-        # Get the path to mcp_server.py
-        server_script = Path(__file__).parent / "mcp_server.py"
-        if not server_script.exists():
-            raise FileNotFoundError(f"mcp_server.py not found at {server_script}")
-
-        # Construct the command
+        # Construct the command to run the MCP server as a Python module
         python_exe = Path(__file__).parent / venv_path / "bin" / "python"
 
-        # Start the server
+        # Verify the Python executable exists
+        if not python_exe.exists():
+            raise FileNotFoundError(f"Python executable not found at {python_exe}")
+
+        # Start the server using Python module execution
+        # This runs: python -m usaspending_mcp.server
         process = subprocess.Popen(
-            [str(python_exe), str(server_script)],
+            [str(python_exe), "-m", "usaspending_mcp.server"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True

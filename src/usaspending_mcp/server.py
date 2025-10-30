@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Start the server
-#./.venv/bin/python mcp_server.py
-#./.venv/bin/python mcp_client.py
+#./.venv/bin/python -m usaspending_mcp.server
+#./.venv/bin/python -m usaspending_mcp.client
 """
 USASpending.gov MCP Server
 
