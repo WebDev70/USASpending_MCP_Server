@@ -8,7 +8,7 @@ federal acquisition regulations from Parts 14, 15, 16, and 19.
 import re
 import logging
 from mcp.types import TextContent
-from src.helpers.far_loader import (
+from ..helpers.far_loader import (
     load_far_all_parts,
     get_part_names,
     get_part_descriptions,
