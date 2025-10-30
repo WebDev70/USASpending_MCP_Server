@@ -3274,7 +3274,7 @@ def run_server():
 # ============================================================================
 # FAR (Federal Acquisition Regulation) Tools - Now in modular structure
 # ============================================================================
-# FAR tools have been moved to src/tools/far_tools.py for better code organization
+# FAR tools have been moved to src/usaspending_mcp/tools/far.py for better code organization
 # and are registered above via register_far_tools(app)
 #
 # Tools registered:
@@ -3282,8 +3282,8 @@ def run_server():
 #  - search_far: Search FAR across all parts by keywords
 #  - list_far_sections: List all available FAR sections
 #
-# See src/tools/far_tools.py for implementation details
-# See src/helpers/far_loader.py for FAR data loading logic
+# See src/usaspending_mcp/tools/far.py for implementation details
+# See src/usaspending_mcp/loaders/far.py for FAR data loading logic
 
 
 async def run_stdio():

@@ -35,7 +35,7 @@ async def main():
         # Start the MCP server as a subprocess using stdio
         server_params = StdioServerParameters(
             command="./.venv/bin/python",
-            args=["mcp_server.py", "--stdio"],
+            args=["-m", "usaspending_mcp.server", "--stdio"],
             env=None
         )
         
