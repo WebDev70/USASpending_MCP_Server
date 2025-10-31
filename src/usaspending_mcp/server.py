@@ -3296,14 +3296,11 @@ def run_server():
 
 async def run_stdio():
     """Run the server using stdio transport (for MCP clients)"""
-    from mcp.server.stdio import stdio_server
-
-    async with stdio_server() as (read_stream, write_stream):
-        await app._mcp_server.run(
-            read_stream,
-            write_stream,
-            app._mcp_server.create_initialization_options()
-        )
+    try:
+        await app.run_stdio()
+    except Exception as e:
+        logger.error(f"Error running stdio server: {e}")
+        raise
 
 if __name__ == "__main__":
     import sys

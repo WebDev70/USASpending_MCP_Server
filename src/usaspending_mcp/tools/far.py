@@ -5,6 +5,8 @@ Provides MCP tools for procurement professionals to search and reference
 federal acquisition regulations from Parts 14, 15, 16, and 19.
 """
 
+from __future__ import annotations
+
 import re
 import logging
 from mcp.types import TextContent
@@ -285,8 +287,8 @@ EXAMPLES:
                     output += "  No zero-result searches found\n"
 
                 output += f"\nCROSS-PART TOPICS (Multi-part searches):\n"
-                if report.get("cross_part_topics"):
-                    for item in report["cross_part_topics"][:10]:
+                if report.get("cross_filter_topics"):
+                    for item in report["cross_filter_topics"][:10]:
                         output += f"  '{item['keyword']}': {item['count']} times\n"
                 else:
                     output += "  No cross-part searches found\n"

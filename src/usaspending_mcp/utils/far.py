@@ -29,8 +29,18 @@ class FARDatabase:
 
     def _load_far_data(self):
         """Load FAR data from JSON files."""
+        # Get the project root directory
+        # From src/usaspending_mcp/utils/far.py, go up 3 levels to project root
+        package_root = Path(__file__).resolve().parent.parent.parent.parent
+        docs_dir = package_root / "docs"
+
         # Try multiple possible locations
         far_paths = [
+            docs_dir / "far_part14.json",
+            docs_dir / "far_part15.json",
+            docs_dir / "far_part16.json",
+            docs_dir / "far_part19.json",
+            # Fallback to /tmp/ if docs files not found
             Path("/tmp/part14_full.json"),
             Path("/tmp/part15_full.json"),
             Path("/tmp/part16_full.json"),
@@ -42,10 +52,12 @@ class FARDatabase:
                 try:
                     with open(path, 'r') as f:
                         data = json.load(f)
-                        part_num = path.stem.replace("part", "").replace("_full", "")
+                        # Extract part number from filename (far_part14.json -> 14)
+                        part_num = path.stem.split('_')[-1].replace("part", "")
                         self.parts[f"Part {part_num}"] = data
-                        self._index_sections(part_num, data.get("sections", {}))
-                        logger.debug(f"Loaded {len(data.get('sections', {}))} sections from Part {part_num}")
+                        # Data is already in sections format (section_number: {title, content})
+                        self._index_sections(part_num, data)
+                        logger.info(f"Loaded {len(data)} sections from Part {part_num}")
                 except Exception as e:
                     logger.warning(f"Failed to load {path}: {e}")
 
