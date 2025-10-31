@@ -35,6 +35,14 @@ app = FastMCP(name="usaspending-server")
 # Base URL for USASpending API
 BASE_URL = "https://api.usaspending.gov/api/v2"
 
+# Import retry and rate limiting utilities
+from usaspending_mcp.utils.retry import make_api_call_with_retry, fetch_json_with_retry
+from usaspending_mcp.utils.rate_limit import get_rate_limiter, initialize_rate_limiter
+
+# Initialize rate limiter: 60 requests per minute
+rate_limiter = initialize_rate_limiter(requests_per_minute=60)
+logger.info("Rate limiter initialized: 60 requests/minute")
+
 # Register modular tool sets
 # FAR tools are registered from the usaspending_mcp.tools module
 try:
