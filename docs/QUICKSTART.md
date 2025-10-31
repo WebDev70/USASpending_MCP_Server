@@ -208,6 +208,49 @@ The server is production-ready with comprehensive error handling. See TROUBLESHO
 
 ---
 
+## 📊 FAR Analytics & Search Tracking
+
+The FAR tools include built-in **search analytics** that automatically track:
+- Most popular FAR search terms
+- Searches that return no results (for improvement)
+- Topic searches spanning multiple FAR parts
+- User search patterns and trends
+
+### View Analytics Reports
+
+After performing some FAR searches, view analytics:
+
+```bash
+# In Claude Desktop or via client, use:
+get_far_analytics_report("summary")    # Overall summary
+get_far_analytics_report("trending")   # Top search terms
+get_far_analytics_report("zero_results")  # Searches with no results
+```
+
+### For Operators
+
+Monitor tool effectiveness:
+```python
+# Via Python
+from usaspending_mcp.utils.search_analytics import get_analytics
+
+analytics = get_analytics("far")
+report = analytics.generate_report()
+
+print(f"Total searches: {report['summary']['total_searches']}")
+print(f"Success rate: {100 - report['summary']['zero_result_percentage']:.0f}%")
+```
+
+### Learn More
+
+- **FAR Users**: See [FAR_ANALYTICS_GUIDE.md](FAR_ANALYTICS_GUIDE.md) for complete usage
+- **Developers**: See [MULTI_TOOL_ANALYTICS_ARCHITECTURE.md](MULTI_TOOL_ANALYTICS_ARCHITECTURE.md) for architecture
+- **Architecture**: See [dev/ARCHITECTURE_GUIDE.md](dev/ARCHITECTURE_GUIDE.md#analytics-architecture) for integration details
+
+Analytics data is stored in `/tmp/mcp_analytics/far_analytics.jsonl` (JSON Lines format).
+
+---
+
 ## 🔄 Future Work (Phase 4)
 
 When you're ready to enhance further:
@@ -216,6 +259,7 @@ When you're ready to enhance further:
 1. Add caching layer (Redis) - 4-6 hours
 2. Support historical date ranges - 2-3 hours
 3. Real-time alerts system - 8-10 hours
+4. USASpending analytics integration - 2-3 hours
 
 See ARCHITECTURE_GUIDE.md for detailed roadmap information
 

@@ -490,12 +490,184 @@ Focus on:
 
 ---
 
+## Analytics Architecture
+
+### Overview
+
+The FAR tools include a **configurable, reusable analytics system** that tracks search patterns, user interactions, and tool usage. This architecture is designed to support multiple tools with minimal code duplication.
+
+### Key Design Pattern: Tool-Agnostic Analytics
+
+```
+Single SearchAnalytics Class
+        ↓
+Multiple Instances (One Per Tool)
+        ↓
+Tool-Specific Configuration
+        ↓
+Separate Data Storage Per Tool
+```
+
+**Benefits:**
+- **Code Reuse**: One implementation, multiple tools
+- **Tool Flexibility**: Each tool configures its own filter names and behavior
+- **Data Isolation**: FAR analytics separate from USASpending, etc.
+- **Scalability**: Add unlimited tools without code duplication
+
+### How It Works
+
+1. **Tool logs search**: `analytics = get_analytics("far")`
+2. **Record created**: Generic record with tool metadata
+3. **Filter field dynamic**: `filter_name` config determines the field name
+4. **Data stored**: Tool-specific JSONL file (`far_analytics.jsonl`)
+5. **Reports generated**: Tool-aware analytics with metrics
+
+### Record Format
+
+```json
+{
+  "timestamp": "2025-10-31T02:40:54.783188Z",
+  "tool": "far",
+  "keyword": "best value",
+  "search_type": "keyword",
+  "results_count": 5,
+  "part": null,
+  "user_id": "anonymous",
+  "success": true
+}
+```
+
+**Dynamic Field**: The `"part"` field name comes from configuration. USASpending tools would use `"agency"` instead.
+
+### Integration Points
+
+**In FAR Tools** (`src/usaspending_mcp/tools/far.py`):
+```python
+from usaspending_mcp.utils.search_analytics import get_analytics
+
+async def search_far_regulations(keyword: str, part: str = None):
+    # ... perform search ...
+
+    # Log to analytics
+    analytics = get_analytics("far")
+    analytics.log_search(
+        keyword=keyword,
+        results_count=len(results),
+        filter_value=part,
+        search_type="keyword"
+    )
+```
+
+**In Server Setup**:
+Initialize analytics when server starts:
+```python
+from usaspending_mcp.utils.search_analytics import initialize_analytics
+
+initialize_analytics("far", {"filter_name": "part"})
+```
+
+### Adding New Tools with Analytics
+
+To add analytics to a new tool:
+
+1. **Initialize in server**:
+   ```python
+   initialize_analytics("my_tool", {"filter_name": "my_filter"})
+   ```
+
+2. **Log in tool**:
+   ```python
+   analytics = get_analytics("my_tool")
+   analytics.log_search(
+       keyword=query,
+       results_count=len(results),
+       filter_value=filter_val
+   )
+   ```
+
+3. **Get reports**:
+   ```python
+   report = get_analytics("my_tool").generate_report()
+   ```
+
+That's it. No code duplication needed.
+
+### Analytics Storage
+
+- **Location**: `/tmp/mcp_analytics/{tool_name}_analytics.jsonl`
+- **Format**: JSON Lines (one record per line)
+- **Size**: ~500 bytes per search event
+
+Example files:
+```
+/tmp/mcp_analytics/
+├── far_analytics.jsonl          (FAR searches)
+├── usaspending_analytics.jsonl  (USASpending searches)
+└── other_tool_analytics.jsonl   (Other tools)
+```
+
+### Future: Multi-Tool Dashboards
+
+When USASpending analytics are added:
+
+```python
+from usaspending_mcp.utils.search_analytics import get_all_analytics
+
+# Get analytics for all tools at once
+all_analytics = get_all_analytics()
+
+# Generate multi-tool report
+for tool_name, analytics in all_analytics.items():
+    report = analytics.generate_report()
+    print(f"{tool_name}: {report['summary']['total_searches']} searches")
+```
+
+### Best Practices
+
+1. **Always use tool-specific get_analytics()**
+   ```python
+   # Correct
+   analytics = get_analytics("my_tool")
+
+   # Avoid
+   analytics = get_analytics()  # Only works for FAR
+   ```
+
+2. **Include appropriate search_type**
+   ```python
+   # Be specific about the search type
+   analytics.log_search(keyword, count, search_type="section")
+   ```
+
+3. **Use filter_value for optional filters**
+   ```python
+   # Log with optional filter
+   analytics.log_search(keyword, count, filter_value=part_num)
+   ```
+
+### Performance Impact
+
+- **Logging overhead**: <1ms per search
+- **Storage**: ~500 bytes per search
+- **Report generation**: ~20ms for typical dataset
+
+Negligible impact on overall tool performance.
+
+### Documentation References
+
+For detailed analytics information:
+- **FAR Users**: See [FAR_ANALYTICS_GUIDE.md](../FAR_ANALYTICS_GUIDE.md)
+- **Developers**: See [MULTI_TOOL_ANALYTICS_ARCHITECTURE.md](../MULTI_TOOL_ANALYTICS_ARCHITECTURE.md)
+
+---
+
 ## References
 
 - **MCP Specification**: Single server model assumed
 - **Microservices Pattern**: Not applicable until you hit specific constraints
 - **Monolithic Benefits**: Simpler debugging, better state management, lower latency
 - **Migration Cost**: ~2 weeks if needed in future (acceptable cost to avoid premature splitting)
+- **Analytics Pattern**: Configurable, multi-tool approach for tracking and analysis
 
 ---
 

@@ -8,299 +8,408 @@ federal acquisition regulations from Parts 14, 15, 16, and 19.
 import re
 import logging
 from mcp.types import TextContent
-from usaspending_mcp.loaders.far import (
-    load_far_all_parts,
-    get_part_names,
-    get_part_descriptions,
-    get_full_part_names
+
+from usaspending_mcp.utils.far import (
+    get_far_database,
+    initialize_far_database
+)
+from usaspending_mcp.utils.logging import get_logger
+from usaspending_mcp.utils.search_analytics import (
+    initialize_analytics,
+    get_analytics
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger("far_tools")
 
 
 def register_far_tools(app):
     """Register all FAR regulatory tools with the FastMCP server."""
 
+    # Initialize FAR database
+    try:
+        initialize_far_database()
+        logger.info("FAR database initialized successfully")
+    except Exception as e:
+        logger.warning(f"Could not initialize FAR database: {e}")
+
     @app.tool(
-        name="lookup_far_section",
-        description="""Look up a specific FAR (Federal Acquisition Regulation) section by number.
+        name="search_far_regulations",
+        description="""Search FAR regulations by keyword across parts 14, 15, 16, and 19.
+
+Searches all available FAR sections and returns results ranked by relevance.
 
 PARAMETERS:
 -----------
-- section_number: FAR section number (e.g., "15.404-1", "14.305", "16.201", "19.305")
+- keyword: Search term (e.g., "best value", "sealed bidding", "small business")
+- part: Optional - restrict search to specific part (14, 15, 16, or 19)
 
 RETURNS:
 --------
-- Section title and full text content
-- Related sections from the same part
-- Practical guidance for procurement professionals
+- Matching FAR sections with relevance scores
+- Section numbers, titles, and brief previews
+- Total count of results
 
 EXAMPLES:
 ---------
-- lookup_far_section("15.404") → Information on proposal analysis (Part 15)
-- lookup_far_section("14.305") → Sealed bidding evaluation procedures (Part 14)
-- lookup_far_section("16.201") → Fixed-price contracts (Part 16)
-- lookup_far_section("19.305") → 8(a) Business Development Program (Part 19)
+- search_far_regulations("best value") → All sections on best value procurement
+- search_far_regulations("small business", "19") → Small business sections
+- search_far_regulations("contract negotiation", "15") → Negotiation procedures
 """,
     )
-    async def lookup_far_section(section_number: str) -> list[TextContent]:
-        """Look up a specific FAR section from any part (14, 15, 16, 19)"""
-
+    async def search_far_regulations(keyword: str, part: str = None) -> list[TextContent]:
+        """Search FAR regulations by keyword"""
         output = "=" * 100 + "\n"
-        output += f"FAR SECTION LOOKUP: {section_number}\n"
+        output += f"FAR SEARCH: '{keyword}'\n"
+        if part:
+            output += f"Part {part} only\n"
         output += "=" * 100 + "\n\n"
 
         try:
-            all_parts = load_far_all_parts()
+            far_db = get_far_database()
+            results = far_db.search_keyword(keyword, part)
 
-            if not all_parts:
-                output += "ERROR: FAR data not available\n"
-                return [TextContent(type="text", text=output)]
-
-            # Determine which part based on section number prefix
-            part_match = re.match(r'^(\d+)\.', section_number)
-            if not part_match:
-                output += f"Invalid section number format: {section_number}\n"
-                output += "Expected format: XX.YYY (e.g., 15.404, 19.305)\n"
-                return [TextContent(type="text", text=output)]
-
-            part_num = int(part_match.group(1))
-            part_key = f"part{part_num}"
-
-            # Check if we have this part
-            if part_key not in all_parts:
-                output += f"FAR Part {part_num} not available in this tool.\n"
-                output += "Available parts: 14, 15, 16, 19\n"
-                return [TextContent(type="text", text=output)]
-
-            far_data = all_parts[part_key]
-
-            # Normalize section number (remove variations like 15.404-1(c))
-            base_section = re.match(rf'^({part_num}\.\d+(?:-\d+)?)', section_number)
-            if not base_section:
-                output += f"Invalid section number for Part {part_num}: {section_number}\n"
-                return [TextContent(type="text", text=output)]
-
-            base_section = base_section.group(1)
-
-            if base_section in far_data:
-                section_data = far_data[base_section]
-                output += f"SECTION: {base_section}\n"
-
-                # Get part name
-                part_names = get_part_names()
-                part_display = part_names.get(part_num, "Procurement")
-                output += f"PART {part_num}: {part_display}\n"
-                output += f"TITLE: {section_data.get('title', 'N/A')}\n\n"
+            if results:
+                output += f"Found {len(results)} matching sections:\n\n"
+                output += f"{'Section':<15} {'Part':<6} {'Title':<50} {'Relevance'}\n"
                 output += "-" * 100 + "\n"
-                output += "CONTENT:\n"
-                output += "-" * 100 + "\n"
-                output += section_data.get('content', 'No content available') + "\n\n"
 
-                # Find related sections in the same part
-                related = [s for s in far_data.keys() if s.startswith(f"{part_num}.") and s != base_section]
-                if related:
-                    output += "-" * 100 + "\n"
-                    output += f"RELATED SECTIONS IN PART {part_num} ({len(related)} total):\n"
-                    output += "-" * 100 + "\n"
-                    for rel_section in sorted(related)[:10]:
-                        rel_title = far_data[rel_section].get('title', '')
-                        output += f"{rel_section:<15} {rel_title}\n"
-                    if len(related) > 10:
-                        output += f"... and {len(related) - 10} more\n"
+                for result in results[:20]:
+                    section = result['section']
+                    part_num = result['part']
+                    title = result['title'][:40]
+                    relevance = result['relevance']
+                    output += f"{section:<15} {part_num:<6} {title:<50} {relevance}\n"
+
+                if len(results) > 20:
+                    output += f"\n... and {len(results) - 20} more results\n"
             else:
-                output += f"Section {section_number} not found in FAR Part {part_num}.\n\n"
-                output += f"Available sections in Part {part_num}:\n"
-                for section_num in sorted(far_data.keys())[:20]:
-                    output += f"  {section_num}: {far_data[section_num].get('title', '')}\n"
-                output += f"\n... and {len(far_data) - 20} more sections available\n"
+                output += f"No sections found matching '{keyword}'\n"
 
-        except Exception as e:
-            output += f"Error looking up section: {str(e)}\n"
-            logger.error(f"Error in lookup_far_section: {e}")
-
-        output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
-
-    @app.tool(
-        name="search_far",
-        description="""Search FAR (Parts 14, 15, 16, 19) by keywords or topics.
-
-PARAMETERS:
------------
-- query: Search keywords (e.g., "price analysis", "small business", "cost reimbursement", "sealed bidding")
-
-RETURNS:
---------
-- List of matching FAR sections from all available parts
-- Section numbers, titles, and part numbers
-- Relevance ranking
-- Top match details
-
-EXAMPLES:
----------
-- search_far("proposal evaluation") → All sections about evaluating proposals
-- search_far("small business") → Sections on small business programs (Part 19)
-- search_far("cost reimbursement") → Sections on cost-reimbursement contracts
-- search_far("sealed bidding") → Sealed bidding procedures (Part 14)
-""",
-    )
-    async def search_far(query: str) -> list[TextContent]:
-        """Search all available FAR parts (14, 15, 16, 19) by keywords"""
-
-        output = "=" * 100 + "\n"
-        output += f"FAR SEARCH: '{query}' (Parts 14, 15, 16, 19)\n"
-        output += "=" * 100 + "\n\n"
-
-        try:
-            all_parts = load_far_all_parts()
-
-            if not all_parts:
-                output += "ERROR: FAR data not available\n"
-                return [TextContent(type="text", text=output)]
-
-            # Search across all parts
-            query_lower = query.lower()
-            matches = []
-
-            part_names_map = {
-                "part14": "Part 14 - Sealed Bidding",
-                "part15": "Part 15 - Contracting by Negotiation",
-                "part16": "Part 16 - Types of Contracts",
-                "part19": "Part 19 - Small Business Programs"
-            }
-
-            for part_key, far_data in all_parts.items():
-                for section_num, section_data in far_data.items():
-                    title = section_data.get('title', '').lower()
-                    content = section_data.get('content', '').lower()
-
-                    # Score based on relevance
-                    score = 0
-                    if query_lower in title:
-                        score += 10  # Title match is more important
-                    if query_lower in content:
-                        score += 1
-
-                    if score > 0:
-                        matches.append((score, section_num, section_data, part_key))
-
-            if matches:
-                # Sort by score descending, then by section number
-                matches.sort(key=lambda x: (-x[0], x[1]))
-
-                output += f"FOUND {len(matches)} MATCHING SECTIONS ACROSS ALL PARTS:\n\n"
-                output += f"{'Section':<15} {'Part':<15} {'Title':<50}\n"
-                output += "-" * 100 + "\n"
-
-                for score, section_num, section_data, part_key in matches[:20]:
-                    part_display = part_key.replace("part", "Part ")
-                    title = section_data.get('title', '')[:40]
-                    output += f"{section_num:<15} {part_display:<15} {title:<50}\n"
-
-                if len(matches) > 20:
-                    output += f"\n... and {len(matches) - 20} more sections\n"
-
-                output += "\n" + "-" * 100 + "\n"
-                output += "TOP MATCH DETAILS:\n"
-                output += "-" * 100 + "\n"
-                top_score, top_section, top_data, top_part_key = matches[0]
-                output += f"Section: {top_section}\n"
-                output += f"Part: {part_names_map.get(top_part_key, 'Unknown')}\n"
-                output += f"Title: {top_data.get('title', '')}\n\n"
-                output += top_data.get('content', '')[:500] + "...\n"
-            else:
-                output += f"No sections found matching '{query}'\n\n"
-                output += "Try searching for topics like:\n"
-                output += "  - proposal evaluation, source selection, negotiations (Part 15)\n"
-                output += "  - sealed bidding, competitive bids (Part 14)\n"
-                output += "  - cost reimbursement, fixed price, IDIQ, contract types (Part 16)\n"
-                output += "  - small business, 8(a), HUBZone, women-owned (Part 19)\n"
+            # Log search event for analytics
+            analytics = get_analytics("far")
+            analytics.log_search(
+                keyword=keyword,
+                results_count=len(results),
+                filter_value=part,
+                search_type="keyword"
+            )
 
         except Exception as e:
             output += f"Error searching FAR: {str(e)}\n"
-            logger.error(f"Error in search_far: {e}")
+            logger.error(f"Error in search_far_regulations: {e}")
 
         output += "\n" + "=" * 100 + "\n"
         return [TextContent(type="text", text=output)]
 
     @app.tool(
-        name="list_far_sections",
-        description="""List all available FAR sections from Parts 14, 15, 16, and 19.
+        name="get_far_section",
+        description="""Get the complete text of a specific FAR section by number.
+
+PARAMETERS:
+-----------
+- section_number: FAR section number (e.g., "15.203", "19.001", "14.201")
 
 RETURNS:
 --------
-- Complete index of all available FAR sections
-- Sections organized by part
-- Part titles and descriptions
+- Section number and title
+- Full section content
+- Related FAR.gov reference URL
+- Part number for context
 
 EXAMPLES:
 ---------
-- list_far_sections() → Full list of all sections from all parts
+- get_far_section("15.203") → Full text of FAR 15.203 (RFP requirements)
+- get_far_section("19.001") → Full text of FAR 19.001 (Small business definitions)
+- get_far_section("14.305") → Full text of FAR 14.305 (Sealed bidding evaluation)
 """,
     )
-    async def list_far_sections() -> list[TextContent]:
-        """List all available FAR sections from all parts (14, 15, 16, 19)"""
-
+    async def get_far_section(section_number: str) -> list[TextContent]:
+        """Get a specific FAR section by number"""
         output = "=" * 100 + "\n"
-        output += "FAR SECTIONS INDEX - Parts 14, 15, 16, 19\n"
+        output += f"FAR SECTION: {section_number}\n"
         output += "=" * 100 + "\n\n"
 
         try:
-            all_parts = load_far_all_parts()
+            far_db = get_far_database()
+            section = far_db.get_section(section_number)
 
-            if not all_parts:
-                output += "ERROR: FAR data not available\n"
-                return [TextContent(type="text", text=output)]
+            if section:
+                output += f"Section: {section['section']}\n"
+                output += f"Part: {section['part']}\n"
+                output += f"Title: {section['title']}\n\n"
+                output += "-" * 100 + "\n"
+                output += "CONTENT:\n"
+                output += "-" * 100 + "\n"
+                output += section['content'] + "\n\n"
+                output += f"Reference: {section['url']}\n"
+            else:
+                output += f"Section {section_number} not found in FAR database.\n"
+                output += "Check section number format (e.g., 15.203, 19.001)\n"
 
-            part_names_full = get_full_part_names()
-            part_descriptions = get_part_descriptions()
-
-            total_sections = 0
-
-            # Process each part in order
-            for part_key in ["part14", "part15", "part16", "part19"]:
-                if part_key not in all_parts:
-                    continue
-
-                far_data = all_parts[part_key]
-                part_sections = len(far_data)
-                total_sections += part_sections
-
-                output += f"\n{'=' * 100}\n"
-                output += f"{part_names_full.get(part_key, 'Unknown Part')}\n"
-                output += f"{part_descriptions.get(part_key, '')}\n"
-                output += f"{'=' * 100}\n\n"
-
-                # Organize sections by subpart
-                subparts = {}
-                for section_num in sorted(far_data.keys()):
-                    # Extract subpart (14.1, 15.2, 16.3, etc.)
-                    match = re.match(rf'^(\d+)\.(\d)', section_num)
-                    if match:
-                        subpart_num = match.group(2)
-                        subpart = f"{match.group(1)}.{subpart_num}"
-                        if subpart not in subparts:
-                            subparts[subpart] = []
-                        subparts[subpart].append((section_num, far_data[section_num]))
-
-                # Print organized by subpart
-                for subpart in sorted(subparts.keys()):
-                    output += f"Subpart {subpart}:\n"
-                    output += "-" * 100 + "\n"
-                    for section_num, section_data in subparts[subpart]:
-                        title = section_data.get('title', 'N/A')
-                        output += f"  {section_num:<15} {title}\n"
-                    output += "\n"
-
-                output += f"Subtotal for {part_names_full.get(part_key, 'this part')}: {part_sections} sections\n\n"
-
-            output += "=" * 100 + "\n"
-            output += f"GRAND TOTAL: {total_sections} sections available across all parts\n"
-            output += "=" * 100 + "\n"
+            # Log section lookup for analytics
+            analytics = get_analytics("far")
+            analytics.log_search(
+                keyword=section_number,
+                results_count=1 if section else 0,
+                search_type="section"
+            )
 
         except Exception as e:
-            output += f"Error listing sections: {str(e)}\n"
-            logger.error(f"Error in list_far_sections: {e}")
+            output += f"Error retrieving section: {str(e)}\n"
+            logger.error(f"Error in get_far_section: {e}")
 
+        output += "\n" + "=" * 100 + "\n"
+        return [TextContent(type="text", text=output)]
+
+    @app.tool(
+        name="get_far_topic_sections",
+        description="""Get all FAR sections related to a specific procurement topic.
+
+Finds sections by topic keywords like "best value", "source selection", "small business", etc.
+
+PARAMETERS:
+-----------
+- topic: Topic keyword (e.g., "best value", "sealed bidding", "small business")
+- part: Optional - restrict to specific part (14, 15, 16, or 19)
+
+RETURNS:
+--------
+- All relevant sections for the topic
+- Section numbers and titles
+- Part organization
+
+EXAMPLES:
+---------
+- get_far_topic_sections("best value") → All sections on best value procurement
+- get_far_topic_sections("small business") → Small business program sections (Part 19)
+- get_far_topic_sections("source selection", "15") → Source selection in Part 15
+""",
+    )
+    async def get_far_topic_sections(topic: str, part: str = None) -> list[TextContent]:
+        """Get FAR sections by topic"""
+        output = "=" * 100 + "\n"
+        output += f"FAR TOPIC LOOKUP: {topic}\n"
+        if part:
+            output += f"Part {part} only\n"
+        output += "=" * 100 + "\n\n"
+
+        try:
+            far_db = get_far_database()
+            sections = far_db.get_topic_sections(topic, part)
+
+            if sections:
+                output += f"Found {len(sections)} sections related to '{topic}':\n\n"
+                output += f"{'Section':<15} {'Part':<6} {'Title'}\n"
+                output += "-" * 100 + "\n"
+
+                for section in sections[:30]:
+                    section_num = section['section']
+                    part_num = section['part']
+                    title = section['title']
+                    output += f"{section_num:<15} {part_num:<6} {title}\n"
+
+                if len(sections) > 30:
+                    output += f"\n... and {len(sections) - 30} more sections\n"
+            else:
+                output += f"No sections found for topic '{topic}'\n"
+
+            # Log topic lookup for analytics
+            analytics = get_analytics("far")
+            analytics.log_search(
+                keyword=topic,
+                results_count=len(sections),
+                filter_value=part,
+                search_type="topic"
+            )
+
+        except Exception as e:
+            output += f"Error looking up topic: {str(e)}\n"
+            logger.error(f"Error in get_far_topic_sections: {e}")
+
+        output += "\n" + "=" * 100 + "\n"
+        return [TextContent(type="text", text=output)]
+
+    @app.tool(
+        name="get_far_analytics_report",
+        description="""Get search analytics and usage patterns from FAR tool usage.
+
+Provides insights into which FAR topics are searched most frequently, identifies
+searches that return zero results (potential gaps in topic mappings), and shows
+trending search terms across multiple parts.
+
+PARAMETERS:
+-----------
+- report_type: Type of report to generate (trending, zero_results, cross_part, summary)
+
+RETURNS:
+--------
+- Analytics summary with trending topics, failed searches, and cross-part topics
+- Useful for identifying missing topic mappings and improving FAR search capabilities
+
+EXAMPLES:
+---------
+- get_far_analytics_report("summary") → Overall analytics summary
+- get_far_analytics_report("trending") → Most popular FAR search terms
+- get_far_analytics_report("zero_results") → Searches that found no results
+- get_far_analytics_report("cross_part") → Searches spanning multiple FAR parts
+
+""",
+    )
+    async def get_far_analytics_report(report_type: str = "summary") -> list[TextContent]:
+        """Get FAR search analytics and usage patterns"""
+        output = "=" * 100 + "\n"
+        output += f"FAR ANALYTICS REPORT: {report_type.upper()}\n"
+        output += "=" * 100 + "\n\n"
+
+        try:
+            analytics = get_analytics("far")
+            report_type = report_type.lower()
+
+            if report_type == "summary":
+                report = analytics.generate_report()
+                output += "SUMMARY REPORT\n"
+                output += "-" * 100 + "\n"
+
+                output += f"\nTRENDING TOPICS (Top 10):\n"
+                if report.get("trending_topics"):
+                    for item in report["trending_topics"]:
+                        output += f"  {item['keyword']}: {item['searches']} searches ({item['success_rate']*100:.0f}% success)\n"
+                else:
+                    output += "  No search data available yet\n"
+
+                output += f"\nZERO-RESULT SEARCHES (Gaps in topic mappings):\n"
+                if report.get("zero_result_searches"):
+                    for item in report["zero_result_searches"][:10]:
+                        output += f"  '{item['keyword']}': {item['count']} times\n"
+                else:
+                    output += "  No zero-result searches found\n"
+
+                output += f"\nCROSS-PART TOPICS (Multi-part searches):\n"
+                if report.get("cross_part_topics"):
+                    for item in report["cross_part_topics"][:10]:
+                        output += f"  '{item['keyword']}': {item['count']} times\n"
+                else:
+                    output += "  No cross-part searches found\n"
+
+                output += f"\n\nOVERALL STATISTICS:\n"
+                if report.get("summary"):
+                    output += f"  Total Searches: {report['summary'].get('total_searches', 0)}\n"
+                    output += f"  Avg Results/Search: {report['summary'].get('avg_results_per_search', 0):.1f}\n"
+                    output += f"  Zero-Result Rate: {report['summary'].get('zero_result_percentage', 0):.1f}%\n"
+
+            elif report_type == "trending":
+                trending = analytics.get_trending_topics(limit=20)
+                output += "TRENDING SEARCH TERMS\n"
+                output += "-" * 100 + "\n"
+                output += f"{'Keyword':<30} {'Searches':<12} {'Success Rate':<15} {'Failures'}\n"
+                output += "-" * 100 + "\n"
+
+                if trending:
+                    for item in trending:
+                        output += f"{item['keyword']:<30} {item['searches']:<12} {item['success_rate']*100:>6.0f}% {item['failures']:<15}\n"
+                else:
+                    output += "No search data available yet\n"
+
+            elif report_type == "zero_results":
+                zero_results = analytics.get_zero_result_searches()
+                output += "ZERO-RESULT SEARCHES (Potential topic mapping gaps)\n"
+                output += "-" * 100 + "\n"
+                output += f"{'Keyword':<40} {'Occurrences'}\n"
+                output += "-" * 100 + "\n"
+
+                if zero_results:
+                    for item in zero_results[:30]:
+                        output += f"{item['keyword']:<40} {item['count']:<10}\n"
+                else:
+                    output += "No zero-result searches found\n"
+
+            elif report_type == "cross_part":
+                cross_part = analytics.get_cross_part_searches()
+                output += "CROSS-PART SEARCHES (Topics matching multiple FAR parts)\n"
+                output += "-" * 100 + "\n"
+                output += f"{'Keyword':<40} {'Search Count'}\n"
+                output += "-" * 100 + "\n"
+
+                if cross_part:
+                    for item in cross_part[:30]:
+                        output += f"{item['keyword']:<40} {item['count']:<10}\n"
+                else:
+                    output += "No cross-part searches found\n"
+
+            else:
+                output += f"Unknown report type: {report_type}\n"
+                output += "Available types: summary, trending, zero_results, cross_part\n"
+
+        except Exception as e:
+            output += f"Error generating analytics report: {str(e)}\n"
+            logger.error(f"Error in get_far_analytics_report: {e}")
+
+        output += "\n" + "=" * 100 + "\n"
+        return [TextContent(type="text", text=output)]
+
+    @app.tool(
+        name="check_far_compliance",
+        description="""Check compliance of proposed contracting procedures with FAR rules.
+
+Verifies that contracting methods and requirements comply with applicable FAR parts.
+
+PARAMETERS:
+-----------
+- contracting_method: Method to check (e.g., "sealed_bidding", "negotiation", "small_business")
+- requirements: List of planned requirements to verify (e.g., ["best value", "negotiations"])
+
+RETURNS:
+--------
+- Compliance status (compliant/non-compliant)
+- Issues identified
+- Applicable FAR sections
+
+EXAMPLES:
+---------
+- check_far_compliance("sealed_bidding") → Check sealed bidding compliance
+- check_far_compliance("negotiation", ["best value"]) → Check negotiation with best value
+- check_far_compliance("small_business") → Check small business program compliance
+""",
+    )
+    async def check_far_compliance(contracting_method: str, requirements: list = None) -> list[TextContent]:
+        """Check FAR compliance for contracting method"""
+        output = "=" * 100 + "\n"
+        output += f"FAR COMPLIANCE CHECK: {contracting_method}\n"
+        output += "=" * 100 + "\n\n"
+
+        try:
+            far_db = get_far_database()
+            requirements = requirements or []
+
+            compliance = far_db.check_compliance(contracting_method, requirements)
+
+            output += f"Method: {compliance['method']}\n"
+            output += f"Status: {'COMPLIANT' if compliance['compliant'] else 'POTENTIAL ISSUES'}\n"
+
+            if compliance['part']:
+                output += f"FAR Part: {compliance['part']}\n"
+
+            if compliance.get('issues'):
+                output += f"\nIssues:\n"
+                for issue in compliance['issues']:
+                    output += f"  - {issue}\n"
+
+            if compliance.get('relevant_sections'):
+                output += f"\nRelevant FAR Sections:\n"
+                for section in compliance['relevant_sections']:
+                    output += f"  {section['section']}: {section['title']}\n"
+
+            # Log compliance check for analytics
+            analytics = get_analytics("far")
+            analytics.log_search(
+                keyword=contracting_method,
+                results_count=len(compliance.get('relevant_sections', [])),
+                search_type="compliance"
+            )
+
+        except Exception as e:
+            output += f"Error checking compliance: {str(e)}\n"
+            logger.error(f"Error in check_far_compliance: {e}")
+
+        output += "\n" + "=" * 100 + "\n"
         return [TextContent(type="text", text=output)]
