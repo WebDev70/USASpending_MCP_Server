@@ -66,8 +66,13 @@ def setup_structured_logging(
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
-    # Set root logger level
+    # Set root logger level - use WARNING for third-party libraries
     root_logger.setLevel(getattr(logging, log_level))
+
+    # Suppress verbose logging from mcp and fastmcp libraries (especially during stdio mode)
+    logging.getLogger("mcp").setLevel(logging.WARNING)
+    logging.getLogger("fastmcp").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
 
     # Create formatters
     if json_output:
@@ -80,8 +85,8 @@ def setup_structured_logging(
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
+    # Console handler - use stderr to avoid interfering with stdout streams (MCP protocol, etc)
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
 
