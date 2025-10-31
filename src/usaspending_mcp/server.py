@@ -22,12 +22,12 @@ import uvicorn
 from fastmcp import FastMCP
 from mcp.types import TextContent
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,  # Changed from DEBUG to INFO for cleaner output
-    format='%(levelname)s:%(name)s:%(message)s'
-)
-logger = logging.getLogger(__name__)
+# Import structured logging utilities
+from usaspending_mcp.utils.logging import setup_structured_logging, get_logger
+
+# Set up structured logging with JSON output
+setup_structured_logging(log_level="INFO", json_output=True)
+logger = get_logger("server")
 
 # Initialize FastMCP server
 app = FastMCP(name="usaspending-server")
