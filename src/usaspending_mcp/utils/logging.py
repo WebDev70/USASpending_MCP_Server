@@ -6,11 +6,13 @@ observability and debugging in production environments.
 """
 
 import logging
+import logging.handlers
 import sys
 import json
 import time
 from datetime import datetime
 from typing import Any, Optional
+from pathlib import Path
 from pythonjsonlogger import jsonlogger
 from functools import wraps
 from contextlib import contextmanager
@@ -56,7 +58,7 @@ def setup_structured_logging(
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         json_output: If True, output JSON format; if False, use plain text
-        log_file: Optional file path to write logs to
+        log_file: Optional file path to write logs to (uses default if not specified)
 
     Returns:
         Configured logger instance
@@ -79,22 +81,54 @@ def setup_structured_logging(
         formatter = CustomJsonFormatter(
             fmt="%(timestamp)s %(level)s %(name)s %(message)s"
         )
+        file_formatter = logging.Formatter(
+            fmt="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
     else:
         formatter = logging.Formatter(
             fmt="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
+        file_formatter = formatter
 
     # Console handler - use stderr to avoid interfering with stdout streams (MCP protocol, etc)
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
 
-    # File handler (if specified)
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
+    # Set up file logging with automatic rotation
+    # If no log file specified, use default location in project logs directory
+    if log_file is None:
+        # Get the project root (go up from src/usaspending_mcp/utils/)
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        logs_dir = project_root / "logs"
+        logs_dir.mkdir(exist_ok=True)
+        log_file = str(logs_dir / "usaspending_mcp.log")
+
+    # Create logs directory if it doesn't exist
+    log_path = Path(log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # All logs file handler with rotation (10 MB per file, keep 5 backups)
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=10 * 1024 * 1024,  # 10 MB
+        backupCount=5
+    )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+
+    # Error log file handler (only ERROR and CRITICAL)
+    error_log_file = str(log_path.parent / "usaspending_mcp_errors.log")
+    error_handler = logging.handlers.RotatingFileHandler(
+        error_log_file,
+        maxBytes=5 * 1024 * 1024,  # 5 MB
+        backupCount=3
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(file_formatter)
+    root_logger.addHandler(error_handler)
 
     # Get application logger
     app_logger = logging.getLogger("usaspending_mcp")
