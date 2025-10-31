@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import csv
+import sys
 from io import StringIO
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -25,8 +26,12 @@ from mcp.types import TextContent
 # Import structured logging utilities
 from usaspending_mcp.utils.logging import setup_structured_logging, get_logger
 
-# Set up structured logging with JSON output
-setup_structured_logging(log_level="INFO", json_output=True)
+# Detect if running in stdio mode - if so, disable JSON output to avoid protocol conflicts
+# JSON logging interferes with MCP protocol communication on stdio
+is_stdio_mode = len(sys.argv) > 1 and sys.argv[1] == "--stdio"
+
+# Set up structured logging (JSON only for HTTP mode)
+setup_structured_logging(log_level="INFO", json_output=not is_stdio_mode)
 logger = get_logger("server")
 
 # Initialize FastMCP server
@@ -3297,7 +3302,8 @@ def run_server():
 async def run_stdio():
     """Run the server using stdio transport (for MCP clients)"""
     try:
-        await app.run_stdio()
+        # Use FastMCP's built-in stdio support
+        await app.run_stdio_async()
     except Exception as e:
         logger.error(f"Error running stdio server: {e}")
         raise
