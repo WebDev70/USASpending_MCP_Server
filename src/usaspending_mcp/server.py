@@ -24,7 +24,7 @@ from fastmcp import FastMCP
 from mcp.types import TextContent
 
 # Import structured logging utilities
-from usaspending_mcp.utils.logging import setup_structured_logging, get_logger
+from usaspending_mcp.utils.logging import setup_structured_logging, get_logger, log_search
 
 # Detect if running in stdio mode - if so, disable JSON output to avoid protocol conflicts
 # JSON logging interferes with MCP protocol communication on stdio
@@ -1333,7 +1333,20 @@ def generate_spending_analytics(awards: list, total_count: int) -> str:
 
     output += "\n" + "=" * 80 + "\n"
 
-    return output
+    # Log successful analytics query for analytics
+    log_search(
+        tool_name="analyze_federal_spending",
+        query=args.get("keywords", ""),
+        results_count=total_count,
+        filters={
+            "award_types": args.get("award_types"),
+            "min_amount": args.get("min_amount"),
+            "max_amount": args.get("max_amount"),
+            "agency": args.get("toptier_agency") or args.get("subtier_agency")
+        }
+    )
+
+    return [TextContent(type="text", text=output)]
 
 async def search_awards_logic(args: dict) -> list[TextContent]:
     # Get date range from args or use default (180-day lookback)
@@ -1482,6 +1495,20 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
     else:
         # Generate text output (default)
         output = format_awards_as_text(filtered_awards, total_count, current_page, has_next)
+
+    # Log successful search for analytics
+    log_search(
+        tool_name="search_federal_awards",
+        query=args.get("keywords", ""),
+        results_count=len(filtered_awards),
+        filters={
+            "award_types": args.get("award_types"),
+            "min_amount": args.get("min_amount"),
+            "max_amount": args.get("max_amount"),
+            "agency": args.get("toptier_agency") or args.get("subtier_agency"),
+            "output_format": output_format
+        }
+    )
 
     return [TextContent(type="text", text=output)]
 

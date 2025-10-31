@@ -130,6 +130,22 @@ def setup_structured_logging(
     error_handler.setFormatter(file_formatter)
     root_logger.addHandler(error_handler)
 
+    # Search log file handler (successful tool searches and queries)
+    search_log_file = str(log_path.parent / "usaspending_mcp_searches.log")
+    search_handler = logging.handlers.RotatingFileHandler(
+        search_log_file,
+        maxBytes=20 * 1024 * 1024,  # 20 MB (larger since we'll log more here)
+        backupCount=5
+    )
+    search_handler.setLevel(logging.INFO)
+    search_handler.setFormatter(file_formatter)
+    # Only add search logs from the search logger
+    search_logger = logging.getLogger("usaspending_mcp.searches")
+    search_logger.addHandler(search_handler)
+    search_logger.setLevel(logging.INFO)
+    # Prevent propagation to root logger to avoid duplication
+    search_logger.propagate = False
+
     # Get application logger
     app_logger = logging.getLogger("usaspending_mcp")
     return app_logger
@@ -138,6 +154,39 @@ def setup_structured_logging(
 def get_logger(name: str) -> logging.Logger:
     """Get a logger for a specific module."""
     return logging.getLogger(f"usaspending_mcp.{name}")
+
+
+def log_search(
+    tool_name: str,
+    query: str,
+    results_count: int,
+    execution_time_ms: float = None,
+    filters: dict = None,
+) -> None:
+    """
+    Log a successful search/query execution.
+
+    Args:
+        tool_name: Name of the tool used (e.g., "search_federal_awards")
+        query: The search query string
+        results_count: Number of results returned
+        execution_time_ms: Execution time in milliseconds (optional)
+        filters: Dictionary of filters applied (optional)
+    """
+    search_logger = logging.getLogger("usaspending_mcp.searches")
+
+    # Build message with structured information
+    message = f"Tool: {tool_name} | Query: {query} | Results: {results_count}"
+
+    if execution_time_ms is not None:
+        message += f" | Time: {execution_time_ms:.0f}ms"
+
+    if filters:
+        filter_str = ", ".join([f"{k}={v}" for k, v in filters.items() if v])
+        if filter_str:
+            message += f" | Filters: {filter_str}"
+
+    search_logger.info(message)
 
 
 def log_api_call(func):
