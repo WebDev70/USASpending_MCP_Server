@@ -1602,7 +1602,7 @@ EXAMPLES:
 - "get_spending_by_state top_n:20" → Top 20 states ranked by spending
 """,
 )
-async def get_spending_by_state(state: str = "", top_n: int = 10) -> list[TextContent]:
+async def get_spending_by_state(state: Optional[str] = None, top_n: int = 10) -> list[TextContent]:
     """Get federal spending by state and territory"""
     output = "=" * 100 + "\n"
     output += "FEDERAL SPENDING BY STATE AND TERRITORY\n"
@@ -1686,7 +1686,7 @@ EXAMPLES:
 - "get_spending_trends agency:dod" → DOD spending trends over time
 """,
 )
-async def get_spending_trends(period: str = "fiscal_year", agency: str = "", award_type: str = "") -> list[TextContent]:
+async def get_spending_trends(period: str = "fiscal_year", agency: Optional[str] = None, award_type: Optional[str] = None) -> list[TextContent]:
     """Get federal spending trends over time"""
     output = "=" * 100 + "\n"
     output += f"FEDERAL SPENDING TRENDS - {period.upper()}\n"
@@ -1785,7 +1785,7 @@ EXAMPLES:
 - "get_budget_functions detailed:true" → Detailed budget breakdown
 """,
 )
-async def get_budget_functions(agency: str = "", detailed: str = "false") -> list[TextContent]:
+async def get_budget_functions(agency: Optional[str] = None, detailed: str = "false") -> list[TextContent]:
     """Get federal spending by budget function"""
     output = "=" * 100 + "\n"
     output += "FEDERAL SPENDING BY BUDGET FUNCTION\n"
@@ -2047,7 +2047,7 @@ EXAMPLES:
 - "get_object_class_analysis fiscal_year:2024" → 2024 spending analysis
 """,
 )
-async def get_object_class_analysis(agency: str = "", fiscal_year: str = "") -> list[TextContent]:
+async def get_object_class_analysis(agency: Optional[str] = None, fiscal_year: Optional[str] = None) -> list[TextContent]:
     """Analyze spending by object class"""
     output = "=" * 100 + "\n"
     output += "FEDERAL SPENDING BY OBJECT CLASS\n"
@@ -2196,7 +2196,7 @@ EXAMPLES:
 - "analyze_small_business agency:gsa sb_type:wob" → GSA women-owned spending
 """,
 )
-async def analyze_small_business(sb_type: str = "", agency: str = "") -> list[TextContent]:
+async def analyze_small_business(sb_type: Optional[str] = None, agency: Optional[str] = None) -> list[TextContent]:
     """Analyze small business and disadvantaged business spending"""
     output = "=" * 100 + "\n"
     output += "SMALL BUSINESS & DISADVANTAGED BUSINESS ENTERPRISE ANALYSIS\n"
@@ -2261,7 +2261,7 @@ EXAMPLES:
 - "emergency_spending_tracker state:Texas year:2024" → Texas 2024 emergency spending
 """,
 )
-async def emergency_spending_tracker(disaster_type: str = "", year: str = "", state: str = "") -> list[TextContent]:
+async def emergency_spending_tracker(disaster_type: Optional[str] = None, year: Optional[str] = None, state: Optional[str] = None) -> list[TextContent]:
     """Track emergency and disaster-related spending"""
     output = "=" * 100 + "\n"
     output += "FEDERAL EMERGENCY & DISASTER SPENDING TRACKER\n"
@@ -2360,7 +2360,7 @@ EXAMPLES:
 - "spending_efficiency_metrics sector:manufacturing" → Manufacturing sector efficiency
 """,
 )
-async def spending_efficiency_metrics(agency: str = "", sector: str = "", time_period: str = "annual") -> list[TextContent]:
+async def spending_efficiency_metrics(agency: Optional[str] = None, sector: Optional[str] = None, time_period: str = "annual") -> list[TextContent]:
     """Analyze federal spending efficiency and procurement patterns"""
     output = "=" * 100 + "\n"
     output += "FEDERAL SPENDING EFFICIENCY METRICS & PROCUREMENT ANALYSIS\n"
@@ -2532,7 +2532,7 @@ EXAMPLES:
 - get_field_documentation() → Summary of key searchable fields
 """,
 )
-async def get_field_documentation(search_term: str = "", show_all: str = "false") -> list[TextContent]:
+async def get_field_documentation(search_term: Optional[str] = None, show_all: str = "false") -> list[TextContent]:
     """Get documentation for available data fields in USASpending.gov"""
 
     output = "=" * 100 + "\n"
@@ -2745,7 +2745,7 @@ EXAMPLES:
 - get_subaward_data(vendor_name="Acme Corp") → All subawards to Acme Corp
 """,
 )
-async def get_subaward_data(award_id: str = "", vendor_name: str = "", max_results: int = 10) -> list[TextContent]:
+async def get_subaward_data(award_id: Optional[str] = None, vendor_name: Optional[str] = None, max_results: int = 10) -> list[TextContent]:
     """Find subawards and subcontractors"""
 
     output = "=" * 100 + "\n"
@@ -2832,7 +2832,7 @@ EXAMPLES:
 - get_disaster_funding(year="2024") → All disaster spending in FY2024
 """,
 )
-async def get_disaster_funding(disaster_type: str = "", state: str = "", year: str = "", max_results: int = 10) -> list[TextContent]:
+async def get_disaster_funding(disaster_type: Optional[str] = None, state: Optional[str] = None, year: Optional[str] = None, max_results: int = 10) -> list[TextContent]:
     """Track emergency and disaster-related federal funding"""
 
     output = "=" * 100 + "\n"
@@ -2929,7 +2929,7 @@ EXAMPLES:
 - get_recipient_details(recipient_id="123456789") → Profile for DUNS 123456789
 """,
 )
-async def get_recipient_details(recipient_id: str = "", recipient_name: str = "", detail_level: str = "detail") -> list[TextContent]:
+async def get_recipient_details(recipient_id: Optional[str] = None, recipient_name: Optional[str] = None, detail_level: str = "detail") -> list[TextContent]:
     """Get comprehensive recipient/vendor profiles"""
 
     output = "=" * 100 + "\n"
