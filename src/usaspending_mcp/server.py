@@ -688,14 +688,23 @@ def format_currency(amount: float) -> str:
 async def make_api_request(endpoint: str, params: dict = None, method: str = "GET", json_data: dict = None) -> dict:
     """Make request to USASpending API with error handling and logging"""
     url = f"{BASE_URL}/{endpoint}"
-    
+
     try:
         if method == "POST":
             response = await http_client.post(url, json=json_data)
         else:
             response = await http_client.get(url, params=params)
-        
-        response.raise_for_status()
+
+        # Check for HTTP errors
+        if response.status_code >= 400:
+            try:
+                error_detail = response.json()
+                logger.error(f"API error ({response.status_code}): {error_detail}")
+                return {"error": f"API Error {response.status_code}: {error_detail}"}
+            except:
+                logger.error(f"API error ({response.status_code}): {response.text}")
+                return {"error": f"API Error {response.status_code}: {response.text}"}
+
         return response.json()
     except Exception as e:
         logger.error(f"API request error: {str(e)}")
@@ -1129,7 +1138,6 @@ async def analyze_awards_logic(args: dict) -> list[TextContent]:
 
     # Build filters (same as search)
     filters = {
-        "keywords": [args.get("keywords", "")],
         "award_type_codes": args.get("award_types", ["A", "B", "C", "D"]),
         "time_period": [
             {
@@ -1138,6 +1146,10 @@ async def analyze_awards_logic(args: dict) -> list[TextContent]:
             }
         ]
     }
+
+    # Only add keywords if they are provided and not empty
+    if args.get("keywords") and args.get("keywords").strip():
+        filters["keywords"] = [args.get("keywords")]
 
     # Add optional filters
     if args.get("place_of_performance_scope"):
@@ -1333,7 +1345,6 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
 
     # Build filters based on arguments
     filters = {
-        "keywords": [args.get("keywords", "")],
         "award_type_codes": args.get("award_types", ["A", "B", "C", "D"]),
         "time_period": [
             {
@@ -1342,6 +1353,10 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
             }
         ]
     }
+
+    # Only add keywords if they are provided and not empty
+    if args.get("keywords") and args.get("keywords").strip():
+        filters["keywords"] = [args.get("keywords")]
 
     # Add place of performance scope filter if specified (domestic/foreign)
     if args.get("place_of_performance_scope"):
