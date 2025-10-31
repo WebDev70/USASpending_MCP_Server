@@ -22,7 +22,6 @@ RETRYABLE_EXCEPTIONS = (
     httpx.TimeoutException,
     httpx.ConnectError,
     httpx.ReadError,
-    httpx.ConnectionPoolTimeout,
 )
 
 # HTTP status codes that should trigger retries
