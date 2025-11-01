@@ -208,6 +208,53 @@ The server is production-ready with comprehensive error handling. See TROUBLESHO
 
 ---
 
+## 📋 Monitoring Logs
+
+The server automatically maintains three comprehensive log files in the `logs/` directory:
+
+### Log Files
+
+1. **`usaspending_mcp.log`** - Complete activity log (all levels)
+   - Server startup/shutdown
+   - Tool execution events
+   - API calls and responses
+   - Rate limiting info
+   - All DEBUG, INFO, WARNING, ERROR, CRITICAL messages
+
+2. **`usaspending_mcp_errors.log`** - Error log only
+   - ERROR and CRITICAL level messages only
+   - Rapid error diagnosis
+   - API errors with details
+
+3. **`usaspending_mcp_searches.log`** - Search analytics
+   - Successful search and analysis queries
+   - Query patterns and usage statistics
+   - Execution times
+   - Filter information
+
+### Monitoring Your Logs
+
+```bash
+# Watch logs in real-time
+tail -f logs/usaspending_mcp.log
+
+# View only errors
+tail -20 logs/usaspending_mcp_errors.log
+
+# View search analytics
+tail -20 logs/usaspending_mcp_searches.log
+
+# Count total searches (when using Claude Desktop)
+wc -l logs/usaspending_mcp_searches.log
+
+# Find API errors with details
+grep "API error" logs/usaspending_mcp_errors.log
+```
+
+**Complete logging documentation**: See `logs/README.md` for detailed examples and advanced monitoring commands.
+
+---
+
 ## 📊 FAR Analytics & Search Tracking
 
 The FAR tools include built-in **search analytics** that automatically track:
@@ -292,5 +339,6 @@ You have a **production-ready, well-documented MCP server** with 21 tools, compr
 
 ---
 
-*Updated: October 29, 2025*
+*Updated: October 31, 2025*
 *Status: Production Ready*
+*Recent Updates: Added monitoring logs section with three log files documentation*

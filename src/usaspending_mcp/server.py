@@ -24,7 +24,7 @@ from fastmcp import FastMCP
 from mcp.types import TextContent
 
 # Import structured logging utilities
-from usaspending_mcp.utils.logging import setup_structured_logging, get_logger, log_search
+from usaspending_mcp.utils.logging import setup_structured_logging, get_logger, log_search, log_tool_execution
 
 # Detect if running in stdio mode - if so, disable JSON output to avoid protocol conflicts
 # JSON logging interferes with MCP protocol communication on stdio
@@ -732,6 +732,7 @@ EXAMPLES:
 - "W91QF425PA017" → Gets the James B Studdard moving services award
 """,
 )
+@log_tool_execution
 async def get_award_by_id(award_id: str) -> list[TextContent]:
     """Get a specific award by Award ID"""
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -845,6 +846,7 @@ EXAMPLES:
 - "software agency:gsa output_format:csv" → GSA software contracts as CSV
 """,
 )
+@log_tool_execution
 async def search_federal_awards(
     query: str,
     max_results: int = 5,
@@ -915,6 +917,7 @@ EXAMPLES:
 - "research AND technology agency:nsf" → NSF research/tech grant analysis
 """,
 )
+@log_tool_execution
 async def analyze_federal_spending(query: str) -> list[TextContent]:
     """Analyze federal spending with aggregated insights"""
     logger.debug(f"Analytics request: {query}")

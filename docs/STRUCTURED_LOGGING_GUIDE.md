@@ -5,7 +5,8 @@
 This document explains how to use the structured logging system in the USASpending MCP Server for better observability and debugging in production environments.
 
 **Implementation Date**: October 30, 2025
-**Status**: ✅ Phase 2 Implementation Complete
+**Last Updated**: October 31, 2025
+**Status**: ✅ Phase 2 Implementation Complete + Tool Execution Logging Enabled
 
 ---
 
@@ -68,6 +69,16 @@ async def my_tool(query: str) -> list[TextContent]:
     #    OR "Tool 'my_tool' execution failed" with error details
     pass
 ```
+
+#### Tools with Active Logging
+
+The following USASpending tools have `@log_tool_execution` decorator enabled:
+
+- ✅ **search_federal_awards** - Logs all keyword searches for federal awards
+- ✅ **analyze_federal_spending** - Logs spending analysis queries with duration
+- ✅ **get_award_by_id** - Logs direct award lookups by ID
+
+These tools now automatically log to `usaspending_mcp.log` whenever they are called from Claude Desktop or CLI. Search analytics are also logged to `usaspending_mcp_searches.log` with query details and result counts.
 
 ### Context Manager for Operations
 
@@ -598,6 +609,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: October 30, 2025
-**Version**: 1.0.0
-**Status**: Phase 2 Implementation Complete
+**Last Updated**: October 31, 2025
+**Version**: 1.1.0
+**Status**: Phase 2 Implementation Complete + Tool Execution Logging Enabled

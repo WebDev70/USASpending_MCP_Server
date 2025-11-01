@@ -241,7 +241,40 @@ This guide provides comprehensive documentation for the production monitoring sy
 
 ## 4. Structured Logging
 
-### 4.1 Log Levels
+### 4.1 Log Files
+
+The server maintains three separate log files in the `logs/` directory with automatic rotation:
+
+| File | Purpose | Size Limit | Backups | Content |
+|------|---------|-----------|---------|---------|
+| **usaspending_mcp.log** | Complete activity log | 10 MB | 5 | All messages (DEBUG→CRITICAL) |
+| **usaspending_mcp_errors.log** | Error diagnosis | 5 MB | 3 | ERROR and CRITICAL only |
+| **usaspending_mcp_searches.log** | Analytics tracking | 20 MB | 5 | Successful searches/queries |
+
+**Log File Locations:**
+```bash
+# View logs in your project directory
+logs/usaspending_mcp.log           # All activity
+logs/usaspending_mcp_errors.log    # Errors only
+logs/usaspending_mcp_searches.log  # Search analytics
+```
+
+**Quick Commands:**
+```bash
+# Monitor in real-time
+tail -f logs/usaspending_mcp.log
+
+# Check for errors
+tail -20 logs/usaspending_mcp_errors.log
+
+# View search statistics
+wc -l logs/usaspending_mcp_searches.log
+grep "Tool:" logs/usaspending_mcp_searches.log | head -20
+```
+
+**Complete Documentation**: See `logs/README.md` for comprehensive log monitoring guide.
+
+### 4.2 Log Levels
 
 ```
 DEBUG   - Detailed diagnostic information
@@ -251,7 +284,7 @@ ERROR   - Error conditions (operation failed)
 CRITICAL - Critical errors (system at risk)
 ```
 
-### 4.2 Log Format
+### 4.3 Log Format
 
 All logs follow standard JSON format:
 
@@ -275,7 +308,7 @@ All logs follow standard JSON format:
 }
 ```
 
-### 4.3 Log Aggregation
+### 4.4 Log Aggregation
 
 **Recommended Tools:**
 - ELK Stack (Elasticsearch, Logstash, Kibana)
@@ -632,7 +665,12 @@ The Production Monitoring Guide provides a complete framework for monitoring the
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: October 29, 2025
+**Document Version**: 1.1
+**Last Updated**: October 31, 2025
 **Maintained By**: USASpending MCP Development Team
+
+**Recent Updates:**
+- Added Section 4.1: Log Files with details on three-file log system
+- Added quick commands for log monitoring
+- Added reference to logs/README.md for comprehensive logging documentation
 
