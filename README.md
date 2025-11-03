@@ -58,6 +58,19 @@ PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 
 Then configure Claude Desktop to connect to `http://localhost:3002/mcp`
 
+## Documentation Guide
+
+New to the project? Start here:
+
+- **📚 [Documentation Roadmap](docs/DOCUMENTATION_ROADMAP.md)** - Choose your learning path based on your role:
+  - First-time user (15 min)
+  - Developer (1-2 hours)
+  - DevOps/Operations (1-2 hours)
+  - Government analyst/Procurement professional (1.5 hours)
+  - Architect/Technical lead (2 hours)
+
+After the quick start above, the roadmap will guide you to the most relevant documentation for your needs.
+
 ## Project Structure
 
 ```
