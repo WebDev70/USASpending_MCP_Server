@@ -36,10 +36,10 @@ class FARDatabase:
 
         # Try multiple possible locations
         far_paths = [
-            docs_dir / "far_part14.json",
-            docs_dir / "far_part15.json",
-            docs_dir / "far_part16.json",
-            docs_dir / "far_part19.json",
+            docs_dir / "data" / "far" / "far_part14.json",
+            docs_dir / "data" / "far" / "far_part15.json",
+            docs_dir / "data" / "far" / "far_part16.json",
+            docs_dir / "data" / "far" / "far_part19.json",
             # Fallback to /tmp/ if docs files not found
             Path("/tmp/part14_full.json"),
             Path("/tmp/part15_full.json"),

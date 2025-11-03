@@ -72,16 +72,30 @@ usaspending-mcp/
 │   └── loaders/                   # Data loading utilities
 │       ├── __init__.py
 │       └── far.py                 # FAR data loaders
-├── docs/                          # Documentation
-│   ├── QUICKSTART.md              # Quick start guide
-│   ├── INSTRUCTIONS.md            # Complete user guide
-│   ├── TROUBLESHOOTING_GUIDE.md
-│   ├── QUERY_PATTERNS_COOKBOOK.md
-│   ├── far_part*.json             # FAR regulatory data (14, 15, 16, 19)
-│   ├── api/                       # API reference docs
-│   │   ├── MCP_API_REFERENCE.md
-│   │   ├── USASPENDING_API_V2_SEARCH_ENDPOINTS.md
-│   │   └── USASPENDING_API_V2_EXAMPLES_AND_APPENDIX.md
+├── docs/                          # Documentation & data
+│   ├── guides/                    # User guides & tutorials
+│   │   ├── QUICKSTART.md
+│   │   ├── STRUCTURED_LOGGING_GUIDE.md
+│   │   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
+│   │   ├── FAR_ANALYTICS_GUIDE.md
+│   │   ├── MCP_BEST_PRACTICES_REVIEW.md
+│   │   ├── MULTI_TOOL_ANALYTICS_ARCHITECTURE.md
+│   │   └── FUTURE_RECOMMENDATIONS.md
+│   ├── data/                      # Data files used by the application
+│   │   └── far/                   # FAR regulatory data (Parts 14, 15, 16, 19)
+│   │       ├── far_part14.json
+│   │       ├── far_part15.json
+│   │       ├── far_part16.json
+│   │       └── far_part19.json
+│   ├── reference/                 # Reference documentation (not loaded by code)
+│   │   ├── api-mappings.json
+│   │   ├── query-templates.json
+│   │   ├── field-dictionary.json
+│   │   ├── sample-responses.json
+│   │   ├── query-optimization.json
+│   │   ├── reference-data.json
+│   │   ├── tools-catalog.json
+│   │   └── usaspending-api-spec.json
 │   └── dev/                       # Developer documentation
 │       ├── ARCHITECTURE_GUIDE.md
 │       ├── TESTING_GUIDE.md

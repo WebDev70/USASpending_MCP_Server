@@ -29,7 +29,7 @@ def load_far_all_parts() -> dict:
             # Get the path relative to this file, then up to docs directory
             current_dir = os.path.dirname(__file__)
             project_root = os.path.dirname(os.path.dirname(current_dir))
-            far_file = os.path.join(project_root, "docs", f"far_part{part_num}.json")
+            far_file = os.path.join(project_root, "docs", "data", "far", f"far_part{part_num}.json")
 
             with open(far_file, 'r') as f:
                 part_data = json.load(f)
