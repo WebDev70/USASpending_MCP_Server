@@ -558,8 +558,8 @@ cat logs.jsonl | jq . | head -1
 
 - **Logging module**: `src/usaspending_mcp/utils/logging.py`
 - **Server initialization**: `src/usaspending_mcp/server.py` (lines 25-30)
-- **Rate limiting guide**: `docs/RATE_LIMITING_AND_RETRY_GUIDE.md`
-- **Best practices review**: `docs/MCP_BEST_PRACTICES_REVIEW.md`
+- **Rate limiting guide**: [`RATE_LIMITING_AND_RETRY_GUIDE.md`](RATE_LIMITING_AND_RETRY_GUIDE.md)
+- **Best practices review**: [`MCP_BEST_PRACTICES_REVIEW.md`](MCP_BEST_PRACTICES_REVIEW.md)
 
 ### Dependencies
 
@@ -567,7 +567,7 @@ cat logs.jsonl | jq . | head -1
 
 ### Related Features
 
-- **Rate Limiting**: `docs/RATE_LIMITING_AND_RETRY_GUIDE.md`
+- **Rate Limiting**: [`RATE_LIMITING_AND_RETRY_GUIDE.md`](RATE_LIMITING_AND_RETRY_GUIDE.md)
 - **Retry Logic**: `src/usaspending_mcp/utils/retry.py`
 - **API Integration**: `src/usaspending_mcp/server.py`
 
@@ -604,8 +604,8 @@ Planned improvements:
 For issues or questions:
 1. Check the source code in `src/usaspending_mcp/utils/logging.py`
 2. Review examples in this guide
-3. Check `docs/MCP_BEST_PRACTICES_REVIEW.md` for context
-4. Check `docs/RATE_LIMITING_AND_RETRY_GUIDE.md` for related features
+3. Check [`MCP_BEST_PRACTICES_REVIEW.md`](MCP_BEST_PRACTICES_REVIEW.md) for context
+4. Check [`RATE_LIMITING_AND_RETRY_GUIDE.md`](RATE_LIMITING_AND_RETRY_GUIDE.md) for related features
 
 ---
 

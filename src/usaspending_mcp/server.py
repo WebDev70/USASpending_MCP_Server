@@ -1150,9 +1150,13 @@ async def analyze_awards_logic(args: dict) -> list[TextContent]:
         ]
     }
 
-    # Only add keywords if they are provided and not empty
-    if args.get("keywords") and args.get("keywords").strip():
-        filters["keywords"] = [args.get("keywords")]
+    # Only add keywords if they are provided and meet minimum length requirement (3 chars)
+    keywords = args.get("keywords")
+    if keywords and keywords.strip() and len(keywords.strip()) >= 3:
+        filters["keywords"] = [keywords.strip()]
+    elif keywords and keywords.strip() and len(keywords.strip()) < 3:
+        # Return error if keywords are too short
+        return [TextContent(type="text", text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'")]
 
     # Add optional filters
     if args.get("place_of_performance_scope"):
@@ -1213,10 +1217,10 @@ async def analyze_awards_logic(args: dict) -> list[TextContent]:
         return [TextContent(type="text", text="No awards found matching your criteria.")]
 
     # Generate analytics
-    analytics_output = generate_spending_analytics(awards, total_count)
+    analytics_output = generate_spending_analytics(awards, total_count, args)
     return [TextContent(type="text", text=analytics_output)]
 
-def generate_spending_analytics(awards: list, total_count: int) -> str:
+def generate_spending_analytics(awards: list, total_count: int, args: dict) -> str:
     """Generate comprehensive spending analytics"""
     if not awards:
         return "No data available for analytics."
@@ -1370,9 +1374,13 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
         ]
     }
 
-    # Only add keywords if they are provided and not empty
-    if args.get("keywords") and args.get("keywords").strip():
-        filters["keywords"] = [args.get("keywords")]
+    # Only add keywords if they are provided and meet minimum length requirement (3 chars)
+    keywords = args.get("keywords")
+    if keywords and keywords.strip() and len(keywords.strip()) >= 3:
+        filters["keywords"] = [keywords.strip()]
+    elif keywords and keywords.strip() and len(keywords.strip()) < 3:
+        # Return error if keywords are too short
+        return [TextContent(type="text", text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'")]
 
     # Add place of performance scope filter if specified (domestic/foreign)
     if args.get("place_of_performance_scope"):
@@ -3349,9 +3357,15 @@ async def run_stdio():
     try:
         # Use FastMCP's built-in stdio support
         await app.run_stdio_async()
-    except Exception as e:
-        logger.error(f"Error running stdio server: {e}")
-        raise
+    except BaseException as e:
+        # Catch all exceptions including TaskGroup errors
+        error_msg = str(e)
+        logger.error(f"Error running stdio server: {error_msg}")
+        # Log more detailed error info for debugging
+        import traceback
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+        # Don't re-raise - allow graceful shutdown
+        return
 
 if __name__ == "__main__":
     import sys

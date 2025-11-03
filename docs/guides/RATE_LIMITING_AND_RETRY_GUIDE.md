@@ -347,7 +347,7 @@ Planned improvements for Phase 3:
 ## Support
 
 For issues or questions:
-1. Check the `docs/MCP_BEST_PRACTICES_REVIEW.md` for context
+1. Check [`MCP_BEST_PRACTICES_REVIEW.md`](MCP_BEST_PRACTICES_REVIEW.md) for context
 2. Review the source code in `src/usaspending_mcp/utils/`
 3. Check logs at DEBUG level for detailed information
 
