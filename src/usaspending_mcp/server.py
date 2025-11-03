@@ -860,7 +860,25 @@ async def search_federal_awards(
     end_date: Optional[str] = None,
     set_aside_type: Optional[str] = None,
 ) -> list[TextContent]:
-    """Search for federal awards with advanced query syntax, optional date range, and set-aside filters"""
+    """Search for federal awards with advanced query syntax, optional date range, and set-aside filters.
+
+    DOCUMENTATION REFERENCES:
+    ========================
+    For reference information about valid filter values and procurement codes, see:
+    - Set-Aside Types: /docs/API_RESOURCES.md → "Set-Asides Reference" section
+      (SDVOSB, WOSB, 8(a), HUBZone, etc.)
+    - Award Types: /docs/API_RESOURCES.md → "Award Types Reference" section
+      (Contract types: A, B, C, D; Grants: 02-11; Loans: 07-09; etc.)
+    - Agency Names: /docs/API_RESOURCES.md → "Top-Tier Agencies Reference" section
+    - Industry Classification: /docs/API_RESOURCES.md → "NAICS Codes Reference" section
+    - Product/Service Types: /docs/API_RESOURCES.md → "PSC Codes Reference" section
+    - Complete Field Definitions: /docs/API_RESOURCES.md → "Data Dictionary" section
+
+    EXAMPLE QUERIES WITH SET-ASIDES:
+    ================================
+    - search_federal_awards("GSA contracts", set_aside_type="SDVOSB")
+    - search_federal_awards("contracts amount:50K-500K", set_aside_type="WOSB")
+    - search_federal_awards("software contracts", set_aside_type="8A")"""
     logger.debug(f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}, set_aside_type={set_aside_type}")
 
     # Validate output format
@@ -917,6 +935,14 @@ Supports the same advanced query syntax as search_federal_awards:
 - Top-tier agency: agency:dod, agency:gsa, etc.
 - Sub-tier agency: subagency:disa, subagency:fas, etc.
 
+DOCUMENTATION REFERENCES:
+------------------------
+For valid filter values and procurement codes:
+- Award Types: /docs/API_RESOURCES.md → "Award Types Reference"
+- Agency Names: /docs/API_RESOURCES.md → "Top-Tier Agencies Reference"
+- Industry/NAICS Codes: /docs/API_RESOURCES.md → "NAICS Codes Reference"
+- Product/Service Codes: /docs/API_RESOURCES.md → "PSC Codes Reference"
+
 EXAMPLES:
 - "software agency:dod" → DOD software contract spending analysis
 - "recipient:\"Dell\" amount:100K-1M" → Dell contracts $100K-$1M analysis
@@ -926,7 +952,15 @@ EXAMPLES:
 )
 @log_tool_execution
 async def analyze_federal_spending(query: str) -> list[TextContent]:
-    """Analyze federal spending with aggregated insights"""
+    """Analyze federal spending with aggregated insights.
+
+    DOCUMENTATION REFERENCES:
+    ========================
+    For information about valid filter values:
+    - Award Types: /docs/API_RESOURCES.md → Award Types Reference
+    - Agencies: /docs/API_RESOURCES.md → Top-Tier Agencies Reference
+    - Industry Classification: /docs/API_RESOURCES.md → NAICS Codes Reference
+    - Product/Service Types: /docs/API_RESOURCES.md → PSC Codes Reference"""
     logger.debug(f"Analytics request: {query}")
 
     # Parse the query for advanced features (same as search)
@@ -958,10 +992,23 @@ Returns detailed breakdown showing:
 
 This provides a comprehensive view of which agencies procure from which industries
 and which contractors dominate each sector.
+
+DOCUMENTATION REFERENCES:
+------------------------
+For detailed NAICS code information and industry classifications:
+- NAICS Reference: /docs/API_RESOURCES.md → "NAICS Codes Reference"
+- Data Dictionary: /docs/API_RESOURCES.md → "Data Dictionary" (for NAICS field definitions)
+- Direct Source: Census.gov/naics/
 """,
 )
 async def get_top_naics_breakdown() -> list[TextContent]:
-    """Get top NAICS codes with agencies and contractors"""
+    """Get top NAICS codes with agencies and contractors.
+
+    DOCUMENTATION REFERENCES:
+    ========================
+    For understanding NAICS codes in results:
+    - NAICS Reference: /docs/API_RESOURCES.md → NAICS Codes Reference
+    - Data Dictionary: /docs/API_RESOURCES.md → Data Dictionary"""
     output = "=" * 100 + "\n"
     output += "TOP 5 NAICS CODES - FEDERAL AGENCIES & CONTRACTORS ANALYSIS\n"
     output += "=" * 100 + "\n\n"
@@ -1072,6 +1119,14 @@ PARAMETERS:
 
 - code_type (optional): "naics" or "psc" (default: search both)
 
+DOCUMENTATION REFERENCES:
+------------------------
+For comprehensive information about NAICS and PSC codes:
+- NAICS Reference: /docs/API_RESOURCES.md → "NAICS Codes Reference"
+- PSC Reference: /docs/API_RESOURCES.md → "PSC Codes Reference"
+- Data Dictionary: /docs/API_RESOURCES.md → "Data Dictionary" section
+- Direct Resources: Census.gov (NAICS), Acquisition.gov (PSC)
+
 EXAMPLES:
 ---------
 - "software" → Find software-related NAICS and PSC codes
@@ -1080,7 +1135,14 @@ EXAMPLES:
 """,
 )
 async def get_naics_psc_info(search_term: str, code_type: str = "both") -> list[TextContent]:
-    """Look up NAICS and PSC code information"""
+    """Look up NAICS and PSC code information.
+
+    DOCUMENTATION REFERENCES:
+    ========================
+    For detailed information about codes found:
+    - NAICS Codes: /docs/API_RESOURCES.md → NAICS Codes Reference
+    - PSC Codes: /docs/API_RESOURCES.md → PSC Codes Reference
+    - Data Dictionary: /docs/API_RESOURCES.md → Data Dictionary"""
     output = f"Looking up codes for: {search_term}\n\n"
     output += "=" * 80 + "\n"
 
@@ -1452,7 +1514,13 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
     count_result = await make_api_request("search/spending_by_award_count", json_data=count_payload, method="POST")
 
     if "error" in count_result:
-        return [TextContent(type="text", text=f"Error getting count: {count_result['error']}")]
+        error_msg = count_result['error']
+        help_text = "\n\nTROUBLESHOOTING TIPS:\n"
+        help_text += "- Check if set-aside type code is valid: See /docs/API_RESOURCES.md → Set-Asides Reference\n"
+        help_text += "- Verify agency name format: See /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
+        help_text += "- Check award type codes: See /docs/API_RESOURCES.md → Award Types Reference\n"
+        help_text += "- See complete field definitions: /docs/API_RESOURCES.md → Data Dictionary"
+        return [TextContent(type="text", text=f"Error getting count: {error_msg}{help_text}")]
 
     total_count = sum(count_result.get("results", {}).values())
 
@@ -1481,7 +1549,15 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
     result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
 
     if "error" in result:
-        return [TextContent(type="text", text=f"Error fetching results: {result['error']}")]
+        error_msg = result['error']
+        help_text = "\n\nTROUBLESHOOTING TIPS:\n"
+        help_text += "- Verify all filter values are valid\n"
+        help_text += "- Check set-aside codes: /docs/API_RESOURCES.md → Set-Asides Reference\n"
+        help_text += "- Check agency names: /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
+        help_text += "- Check award types: /docs/API_RESOURCES.md → Award Types Reference\n"
+        help_text += "- Check NAICS codes: /docs/API_RESOURCES.md → NAICS Codes Reference\n"
+        help_text += "- Check PSC codes: /docs/API_RESOURCES.md → PSC Codes Reference"
+        return [TextContent(type="text", text=f"Error fetching results: {error_msg}{help_text}")]
 
     # Process the results
     awards = result.get("results", [])
@@ -1490,7 +1566,16 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
     has_next = page_metadata.get("hasNext", False)
 
     if not awards:
-        return [TextContent(type="text", text="No awards found matching your criteria.")]
+        help_text = "No awards found matching your criteria.\n\n"
+        help_text += "SUGGESTIONS:\n"
+        help_text += "- Try broader search terms or remove filters\n"
+        help_text += "- Verify filter values are correct:\n"
+        help_text += "  • Set-aside codes: /docs/API_RESOURCES.md → Set-Asides Reference\n"
+        help_text += "  • Agency names: /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
+        help_text += "  • Award types: /docs/API_RESOURCES.md → Award Types Reference\n"
+        help_text += "- Check date range - data may be limited for future dates\n"
+        help_text += "- Consult /docs/API_RESOURCES.md for complete reference information"
+        return [TextContent(type="text", text=help_text)]
 
     # Filter by excluded keywords and amount range if needed
     exclude_keywords = args.get("exclude_keywords", [])
@@ -1520,7 +1605,16 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
         filtered_awards.append(award)
 
     if not filtered_awards:
-        return [TextContent(type="text", text="No awards found matching your criteria after applying filters.")]
+        help_text = "No awards found matching your criteria after applying filters.\n\n"
+        help_text += "SUGGESTIONS:\n"
+        help_text += "- Try removing some filter conditions\n"
+        help_text += "- Check that excluded keywords are not too broad\n"
+        help_text += "- Verify amount range is not too restrictive\n"
+        help_text += "- Check date range contains available data\n"
+        help_text += "- If using custom filters, verify against:\n"
+        help_text += "  • /docs/API_RESOURCES.md → Data Dictionary (field definitions)\n"
+        help_text += "  • /docs/API_RESOURCES.md → Glossary (term definitions)"
+        return [TextContent(type="text", text=help_text)]
 
     # Handle different output formats
     output_format = args.get("output_format", "text")
@@ -2278,6 +2372,13 @@ PARAMETERS:
 - agency (optional): Filter by agency (e.g., "dod", "gsa", "va", "dhs")
 - fiscal_year (optional): Fiscal year to analyze (e.g., 2025, 2026)
 
+DOCUMENTATION REFERENCES:
+------------------------
+For detailed set-aside code information and federal contracting terminology:
+- Set-Aside Reference: /docs/API_RESOURCES.md → "Set-Asides Reference" + /docs/reference/set-asides.json
+- Small Business Glossary: /docs/API_RESOURCES.md → "Glossary of Federal Contracting Terms"
+- Complete Reference Guide: /docs/API_RESOURCES.md → Reference Hierarchy (Glossary → Specialized Refs → Data Dictionary)
+
 EXAMPLES:
 ---------
 - "analyze_small_business" → Overall SB spending across all agencies
@@ -2288,7 +2389,20 @@ EXAMPLES:
 )
 @log_tool_execution
 async def analyze_small_business(sb_type: Optional[str] = None, agency: Optional[str] = None, fiscal_year: Optional[str] = None) -> list[TextContent]:
-    """Analyze small business and disadvantaged business spending with actual data from USASpending API"""
+    """Analyze small business and disadvantaged business spending with actual data from USASpending API.
+
+    DOCUMENTATION REFERENCES:
+    ========================
+    For set-aside type codes and their meanings:
+    - See /docs/API_RESOURCES.md for comprehensive reference guide
+    - See /docs/reference/set-asides.json for complete set-aside code definitions
+    - Check "Glossary of Federal Contracting Terms" for business program explanations
+
+    For agency codes and mapping:
+    - See /docs/API_RESOURCES.md → "Top-Tier Agencies Reference" section
+
+    For questions about federal small business programs:
+    - See /docs/API_RESOURCES.md → "Glossary" for program definitions"""
     output = "=" * 100 + "\n"
     output += "SMALL BUSINESS & DISADVANTAGED BUSINESS ENTERPRISE ANALYSIS\n"
     output += "=" * 100 + "\n\n"
