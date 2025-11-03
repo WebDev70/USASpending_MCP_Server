@@ -1,0 +1,278 @@
+{
+  "version": "1.0",
+  "title": "Federal Set-Aside Type Codes",
+  "description": "Complete reference for Type Set Aside codes used in USASpending API filtering. These codes represent different procurement set-aside programs for small businesses and other designated contractors.",
+  "last_updated": "2025-11-03",
+  "source": "USASpending.gov Data Dictionary - TypeSetAside field",
+  "api_reference_docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/references/data_dictionary.md",
+  "api_resources": "See ../API_RESOURCES.md for complete USASpending API reference links and documentation",
+  "api_filter_field": "type_set_aside",
+  "set_aside_codes": {
+    "NONE": {
+      "code": "NONE",
+      "name": "No Set Aside Used",
+      "description": "Contracts awarded without any set-aside restriction",
+      "category": "general",
+      "example_usage": "Open competition with no special considerations"
+    },
+    "SBA": {
+      "code": "SBA",
+      "name": "Small Business Set Aside - Total",
+      "description": "Total small business set-aside - contract exclusively for small businesses",
+      "category": "small_business",
+      "example_usage": "All competition reserved for certified small businesses",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/small-business-set-asides"
+    },
+    "8A": {
+      "code": "8A",
+      "name": "8(a) Competed",
+      "description": "Competition restricted to 8(a) Business Development Program participants",
+      "category": "socioeconomic",
+      "example_usage": "8(a) certified businesses compete for the contract",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/8a-business-development-program"
+    },
+    "SBP": {
+      "code": "SBP",
+      "name": "Small Business Set Aside - Partial",
+      "description": "Partial small business set-aside - only portion of contract is set aside",
+      "category": "small_business",
+      "example_usage": "Multiple line items, some reserved for small business"
+    },
+    "HMT": {
+      "code": "HMT",
+      "name": "HBCU or MI Set-Aside - Total",
+      "description": "Historically Black Colleges & Universities or Minority Institutions - total set-aside",
+      "category": "minority",
+      "example_usage": "Award exclusively to institutions serving underrepresented groups"
+    },
+    "HMP": {
+      "code": "HMP",
+      "name": "HBCU or MI Set-Aside - Partial",
+      "description": "HBCU or Minority Institution - partial set-aside",
+      "category": "minority",
+      "example_usage": "Portion of contract set aside for HBCU/MI"
+    },
+    "VSB": {
+      "code": "VSB",
+      "name": "Very Small Business",
+      "description": "Set-aside for very small businesses (smaller than standard small business size standards)",
+      "category": "small_business",
+      "example_usage": "Reserved for businesses below specific employee or revenue thresholds"
+    },
+    "ESB": {
+      "code": "ESB",
+      "name": "Emerging Small Business Set-Aside",
+      "description": "Set-aside for emerging small businesses",
+      "category": "small_business",
+      "example_usage": "Newly formed or less established small businesses"
+    },
+    "HZC": {
+      "code": "HZC",
+      "name": "HUBZone Set-Aside",
+      "description": "Historically Underutilized Business Zone Program - competitive set-aside",
+      "category": "geographic",
+      "example_usage": "Businesses located in economically distressed areas can compete",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/hubzone-program"
+    },
+    "SDVOSBC": {
+      "code": "SDVOSBC",
+      "name": "Service Disabled Veteran Owned Small Business Set-Aside",
+      "description": "Set-aside for Service-Disabled Veteran-Owned Small Business (SDVOSB) - competitive",
+      "category": "veteran",
+      "example_usage": "SDVOSB firms compete for the award",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/service-disabled-veteran-owned-small-businesses-sdvosb"
+    },
+    "BI": {
+      "code": "BI",
+      "name": "Buy Indian",
+      "description": "Set-aside under Indian Reorganization Act for Native American owned businesses",
+      "category": "indigenous",
+      "example_usage": "Native American enterprises and Indian tribes"
+    },
+    "IEE": {
+      "code": "IEE",
+      "name": "Indian Economic Enterprise",
+      "description": "Set-aside for Indian Economic Enterprises",
+      "category": "indigenous",
+      "example_usage": "Businesses owned by Indian tribes or tribal members"
+    },
+    "ISBEE": {
+      "code": "ISBEE",
+      "name": "Indian Small Business Economic Enterprise",
+      "description": "Small business set-aside for Indian-owned enterprises",
+      "category": "indigenous",
+      "example_usage": "Native American small businesses"
+    },
+    "HZS": {
+      "code": "HZS",
+      "name": "HUBZone Sole Source",
+      "description": "Sole source award to HUBZone business (no competition)",
+      "category": "geographic",
+      "example_usage": "Single HUBZone firm selected without competition"
+    },
+    "SDVOSBS": {
+      "code": "SDVOSBS",
+      "name": "SDVOSB Sole Source",
+      "description": "Sole source award to Service-Disabled Veteran-Owned Small Business",
+      "category": "veteran",
+      "example_usage": "Single SDVOSB firm awarded without competition"
+    },
+    "8AN": {
+      "code": "8AN",
+      "name": "8(a) Sole Source",
+      "description": "Sole source award to 8(a) Business Development Program participant",
+      "category": "socioeconomic",
+      "example_usage": "Single 8(a) firm selected for award"
+    },
+    "RSB": {
+      "code": "RSB",
+      "name": "Reserved for Small Business",
+      "description": "Contract reserved for small business (general reserve)",
+      "category": "small_business",
+      "example_usage": "Competition limited to all certified small businesses"
+    },
+    "8AC": {
+      "code": "8AC",
+      "name": "SDB Set-Aside 8(a)",
+      "description": "Small Disadvantaged Business 8(a) Set-Aside (Deprecated - will be removed in future)",
+      "category": "socioeconomic",
+      "deprecated": true,
+      "example_usage": "Legacy code - use 8A for current awards"
+    },
+    "HS2": {
+      "code": "HS2",
+      "name": "Combination HUBZone and 8(a)",
+      "description": "Combined HUBZone and 8(a) set-aside (Deprecated - will be removed in future)",
+      "category": "socioeconomic",
+      "deprecated": true,
+      "example_usage": "Legacy code - use individual codes for current awards"
+    },
+    "HS3": {
+      "code": "HS3",
+      "name": "8(a) with HUBZone Preference",
+      "description": "8(a) award with HUBZone price evaluation preference",
+      "category": "socioeconomic",
+      "example_usage": "8(a) business in HUBZone receives price preference"
+    },
+    "VSA": {
+      "code": "VSA",
+      "name": "Veteran Set Aside",
+      "description": "Set-aside for Veteran-Owned Small Businesses (not necessarily service-disabled)",
+      "category": "veteran",
+      "example_usage": "Any veteran-owned small business can compete",
+      "note": "Different from SDVOSB which is specifically service-disabled"
+    },
+    "VSS": {
+      "code": "VSS",
+      "name": "Veteran Sole Source",
+      "description": "Sole source award to Veteran-Owned Small Business",
+      "category": "veteran",
+      "example_usage": "Single veteran-owned firm selected without competition"
+    },
+    "WOSB": {
+      "code": "WOSB",
+      "name": "Women Owned Small Business",
+      "description": "Women-Owned Small Business (WOSB) - competitive set-aside",
+      "category": "women",
+      "example_usage": "WOSB-certified businesses compete for the contract",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/womens-owned-small-business-federal-contracting-program"
+    },
+    "EDWOSB": {
+      "code": "EDWOSB",
+      "name": "Economically Disadvantaged Women Owned Small Business",
+      "description": "Economically Disadvantaged Women-Owned Small Business (EDWOSB) - competitive set-aside",
+      "category": "women",
+      "example_usage": "EDWOSB-certified businesses compete for the contract",
+      "sba_link": "https://www.sba.gov/federal-contracting/contracting-assistance/womens-owned-small-business-federal-contracting-program"
+    },
+    "WOSBSS": {
+      "code": "WOSBSS",
+      "name": "Women Owned Small Business Sole Source",
+      "description": "Sole source award to Women-Owned Small Business",
+      "category": "women",
+      "example_usage": "Single WOSB firm selected without competition"
+    },
+    "EDWOSBSS": {
+      "code": "EDWOSBSS",
+      "name": "Economically Disadvantaged Women Owned Small Business Sole Source",
+      "description": "Sole source award to Economically Disadvantaged WOSB",
+      "category": "women",
+      "example_usage": "Single EDWOSB firm selected without competition"
+    }
+  },
+  "categories": {
+    "general": {
+      "name": "General Set-Asides",
+      "description": "Non-specific or open competition set-asides",
+      "codes": ["NONE", "RSB"]
+    },
+    "small_business": {
+      "name": "Small Business Set-Asides",
+      "description": "Set-asides for small businesses without other restrictions",
+      "codes": ["SBA", "SBP", "VSB", "ESB"]
+    },
+    "socioeconomic": {
+      "name": "Socioeconomic Programs",
+      "description": "Set-asides targeting economically disadvantaged or development programs",
+      "codes": ["8A", "8AC", "8AN", "HS2", "HS3"]
+    },
+    "veteran": {
+      "name": "Veteran-Owned Set-Asides",
+      "description": "Set-asides for veteran-owned businesses",
+      "codes": ["SDVOSBC", "SDVOSBS", "VSA", "VSS"]
+    },
+    "women": {
+      "name": "Women-Owned Set-Asides",
+      "description": "Set-asides for women-owned and economically disadvantaged women-owned businesses",
+      "codes": ["WOSB", "EDWOSB", "WOSBSS", "EDWOSBSS"]
+    },
+    "geographic": {
+      "name": "Geographic Set-Asides",
+      "description": "Set-asides based on business location",
+      "codes": ["HZC", "HZS"]
+    },
+    "minority": {
+      "name": "Minority Institution Set-Asides",
+      "description": "Set-asides for HBCU and minority-serving institutions",
+      "codes": ["HMT", "HMP"]
+    },
+    "indigenous": {
+      "name": "Indigenous/Native American Set-Asides",
+      "description": "Set-asides for Native American and Indian-owned enterprises",
+      "codes": ["BI", "IEE", "ISBEE"]
+    }
+  },
+  "common_queries": {
+    "all_small_business": {
+      "description": "Find all contracts with small business set-asides",
+      "codes": ["SBA", "SBP", "VSB", "ESB", "8A", "8AC", "8AN", "HS2", "HS3"]
+    },
+    "service_disabled_veteran": {
+      "description": "Find all SDVOSB contracts (competed and sole source)",
+      "codes": ["SDVOSBC", "SDVOSBS"]
+    },
+    "women_owned": {
+      "description": "Find all women-owned business contracts",
+      "codes": ["WOSB", "EDWOSB", "WOSBSS", "EDWOSBSS"]
+    },
+    "veteran_owned": {
+      "description": "Find all veteran-owned business contracts",
+      "codes": ["SDVOSBC", "SDVOSBS", "VSA", "VSS"]
+    },
+    "hubzone": {
+      "description": "Find all HUBZone set-aside contracts",
+      "codes": ["HZC", "HZS", "HS2"]
+    },
+    "8a_program": {
+      "description": "Find all 8(a) program contracts",
+      "codes": ["8A", "8AC", "8AN", "HS2", "HS3"]
+    }
+  },
+  "usage_notes": {
+    "gsa_contracts": "GSA frequently uses SDVOSBC and SDVOSBS codes for veteran-owned set-asides",
+    "dod_contracts": "DoD commonly awards under 8A, SBA, and SDVOSB set-asides",
+    "sole_source_vs_competed": "Sole source codes (S suffix) indicate single award without competition, while competed codes allow multiple bids",
+    "deprecated_codes": "8AC and HS2 are deprecated and should not appear in new contracts",
+    "multiple_criteria": "Some businesses may qualify for multiple set-asides but contract uses most restrictive"
+  }
+}

@@ -806,6 +806,7 @@ PARAMETERS:
 - output_format: Output format - "text" (default) or "csv"
 - start_date: Search start date in YYYY-MM-DD format (optional, defaults to 180 days ago)
 - end_date: Search end date in YYYY-MM-DD format (optional, defaults to today)
+- set_aside_type: Filter by set-aside type (e.g., "SDVOSBC", "WOSB", "8A", "HUBZONE") (optional)
 
 SUPPORTED QUERY SYNTAX:
 - Keywords: "software development" searches for both keywords
@@ -844,6 +845,10 @@ EXAMPLES:
 - "construction NOT residential type:grant scope:domestic" → Domestic construction grants
 - "laptops agency:dod subagency:disa amount:100K-1M" → DISA laptop purchases, $100K-$1M
 - "software agency:gsa output_format:csv" → GSA software contracts as CSV
+- With set_aside_type parameter:
+  - search_federal_awards("GSA contracts", set_aside_type="SDVOSBC") → GSA SDVOSB contracts
+  - search_federal_awards("contracts amount:50K-500K", set_aside_type="WOSB") → Women-owned business contracts
+  - search_federal_awards("contracts", set_aside_type="8A") → 8(a) Program contracts
 """,
 )
 @log_tool_execution
@@ -853,9 +858,10 @@ async def search_federal_awards(
     output_format: str = "text",
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    set_aside_type: Optional[str] = None,
 ) -> list[TextContent]:
-    """Search for federal awards with advanced query syntax and optional date range"""
-    logger.debug(f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}")
+    """Search for federal awards with advanced query syntax, optional date range, and set-aside filters"""
+    logger.debug(f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}, set_aside_type={set_aside_type}")
 
     # Validate output format
     if output_format not in ["text", "csv"]:
@@ -881,6 +887,7 @@ async def search_federal_awards(
         "recipient_name": parser.recipient_name,
         "toptier_agency": parser.toptier_agency,
         "subtier_agency": parser.subtier_agency,
+        "set_aside_type": set_aside_type,
         "limit": max_results,
         "output_format": output_format,
         "start_date": actual_start_date,
@@ -1421,6 +1428,24 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
             filters["award_amount"]["lower_bound"] = int(args.get("min_amount"))
         if args.get("max_amount") is not None:
             filters["award_amount"]["upper_bound"] = int(args.get("max_amount"))
+
+    # Add set-aside type filter if specified
+    if args.get("set_aside_type"):
+        set_aside = args.get("set_aside_type").upper().strip()
+        # Support multiple formats for common set-aside types
+        set_aside_mapping = {
+            "SDVOSB": ["SDVOSBC", "SDVOSBS"],  # Both competed and sole source
+            "WOSB": ["WOSB", "EDWOSB"],  # Both WOSB and EDWOSB
+            "VETERAN": ["VSA", "VSS"],  # Both veteran competed and sole source
+            "HUBZONE": ["HZC", "HZS"],  # Both HUBZone competed and sole source
+            "SMALL_BUSINESS": ["SBA", "SBP"],  # Both total and partial SB set-aside
+        }
+
+        if set_aside in set_aside_mapping:
+            filters["type_set_aside"] = set_aside_mapping[set_aside]
+        else:
+            # Use the code directly if it's not in the mapping
+            filters["type_set_aside"] = [set_aside]
 
     # First, get the count
     count_payload = {"filters": filters}
@@ -2228,63 +2253,183 @@ async def compare_states(states: str, metric: str = "total") -> list[TextContent
     name="analyze_small_business",
     description="""Analyze federal spending on small business and disadvantaged contractors.
 
+Queries actual USASpending.gov data for set-aside contracts by type and agency.
+
 Shows:
 - Small business (SB) contract count and value
-- Disadvantaged business enterprise (DBE) spending
 - Women-owned business (WOB) contracts
-- Minority-owned business (MBE) contracts
 - Service-disabled veteran-owned (SDVOSB) contracts
+- 8(a) Business Development Program contracts
+- HUBZone small business contracts
 - Concentration by agency
-- Year-over-year growth
+- Top contractors by type
+
+SUPPORTED SET-ASIDE TYPES:
+- "sdvosb" or "SDVOSBC,SDVOSBS" → Service Disabled Veteran Owned Small Business
+- "wosb" or "WOSB,EDWOSB" → Women Owned Small Business (includes Economically Disadvantaged)
+- "8a" or "8A" → 8(a) Business Development Program
+- "hubzone" or "HZC,HZS" → HUBZone Small Business
+- "small_business" or "SBA,SBP" → All Small Business Set-Asides
+- "veteran" or "VSA,VSS" → All Veteran-Owned (includes Service-Disabled and Non-Service-Disabled)
 
 PARAMETERS:
 -----------
-- sb_type (optional): Filter by type (e.g., "small_business", "dbe", "wob", "mbe")
-- agency (optional): Filter by agency (e.g., "dod", "gsa")
+- sb_type (optional): Filter by type (e.g., "sdvosb", "wosb", "8a", "hubzone")
+- agency (optional): Filter by agency (e.g., "dod", "gsa", "va", "dhs")
+- fiscal_year (optional): Fiscal year to analyze (e.g., 2025, 2026)
 
 EXAMPLES:
 ---------
-- "analyze_small_business" → Overall SB spending
-- "analyze_small_business sb_type:dbe" → DBE contractor analysis
-- "analyze_small_business agency:gsa sb_type:wob" → GSA women-owned spending
+- "analyze_small_business" → Overall SB spending across all agencies
+- "analyze_small_business sb_type:sdvosb" → SDVOSB contractor analysis
+- "analyze_small_business agency:gsa sb_type:wosb" → GSA women-owned spending
+- "analyze_small_business sb_type:8a fiscal_year:2026" → 8(a) contracts in FY2026
 """,
 )
-async def analyze_small_business(sb_type: Optional[str] = None, agency: Optional[str] = None) -> list[TextContent]:
-    """Analyze small business and disadvantaged business spending"""
+@log_tool_execution
+async def analyze_small_business(sb_type: Optional[str] = None, agency: Optional[str] = None, fiscal_year: Optional[str] = None) -> list[TextContent]:
+    """Analyze small business and disadvantaged business spending with actual data from USASpending API"""
     output = "=" * 100 + "\n"
     output += "SMALL BUSINESS & DISADVANTAGED BUSINESS ENTERPRISE ANALYSIS\n"
     output += "=" * 100 + "\n\n"
 
     try:
-        sb_categories = {
-            "small_business": "Small Business (SB)",
-            "dbe": "Disadvantaged Business Enterprise (DBE)",
-            "wob": "Women-Owned Business (WOB)",
-            "mbe": "Minority-Owned Business (MBE)",
-            "sdvosb": "Service-Disabled Veteran-Owned (SDVOSB)",
-            "8a": "8(a) Business Development Program",
-            "hubzone": "HUBZone Small Business",
+        # Map sb_type to set-aside codes
+        sb_type_mapping = {
+            "sdvosb": ["SDVOSBC", "SDVOSBS"],
+            "wosb": ["WOSB", "EDWOSB"],
+            "8a": ["8A"],
+            "hubzone": ["HZC", "HZS"],
+            "small_business": ["SBA", "SBP"],
+            "veteran": ["VSA", "VSS", "SDVOSBC", "SDVOSBS"],
         }
 
-        output += "Small Business Categories:\n"
-        output += "-" * 100 + "\n"
-        for code, desc in sb_categories.items():
-            output += f"  • {desc}\n"
+        # Determine fiscal year date range
+        if fiscal_year:
+            try:
+                fy_int = int(fiscal_year)
+                start_date = f"{fy_int - 1}-10-01"
+                end_date = f"{fy_int}-09-30"
+            except ValueError:
+                start_date = "2024-10-01"
+                end_date = "2025-09-30"
+        else:
+            start_date = "2024-10-01"
+            end_date = "2025-09-30"
 
-        output += "\nFederal SB/DBE Goal by Agency:\n"
-        output += "-" * 100 + "\n"
-        output += "  DOD:      23% of contracts to small businesses\n"
-        output += "  GSA:      25% of contracts to small businesses\n"
-        output += "  HHS:      20% of contracts to small businesses\n"
-        output += "  VA:       21% of contracts to small businesses\n"
-        output += "  Average:  ~20-25% across federal government\n"
+        output += f"Fiscal Year: {start_date.split('-')[0]} - {end_date.split('-')[0]}\n"
+        if agency:
+            output += f"Agency: {agency.upper()}\n"
+        if sb_type:
+            output += f"Set-Aside Type: {sb_type.upper()}\n"
+        output += "-" * 100 + "\n\n"
 
-        output += "\nTo view detailed SB/DBE spending data by agency,\n"
-        output += "visit: https://www.usaspending.gov/\n"
-        output += "and use the 'Set-Asides' filter in the search.\n"
+        # Map agency parameter to agency name
+        agency_mapping = TOPTIER_AGENCY_MAP.copy()
+        agency_name = agency_mapping.get(agency.lower() if agency else "dod", "Department of Defense")
+
+        # Build filters for API query
+        filters = {
+            "award_type_codes": ["B"],  # Contracts only
+            "time_period": [
+                {
+                    "start_date": start_date,
+                    "end_date": end_date
+                }
+            ]
+        }
+
+        # Add agency filter if specified
+        if agency:
+            filters["awarding_agency_name"] = agency_name
+
+        # Determine which set-aside codes to query
+        if sb_type:
+            set_aside_codes = sb_type_mapping.get(sb_type.lower(), [sb_type.upper()])
+        else:
+            # Show summary of all major set-aside types
+            set_aside_codes = None
+
+        # If specific set-aside requested, query for it
+        if set_aside_codes:
+            filters["type_set_aside"] = set_aside_codes
+
+            # Query the API
+            payload = {
+                "filters": filters,
+                "fields": [
+                    "Award ID",
+                    "Recipient Name",
+                    "Award Amount",
+                    "Description"
+                ],
+                "limit": 50,
+                "page": 1
+            }
+
+            result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
+
+            if "error" not in result:
+                awards = result.get("results", [])
+                page_metadata = result.get("page_metadata", {})
+                total_count = page_metadata.get("total_matched", len(awards))
+
+                output += f"Total Contracts Found: {total_count}\n\n"
+
+                if awards:
+                    total_amount = sum(float(a.get("Award Amount", 0)) for a in awards)
+                    avg_amount = total_amount / len(awards) if awards else 0
+
+                    output += f"SUMMARY STATISTICS:\n"
+                    output += "-" * 100 + "\n"
+                    output += f"  Total Value: ${total_amount:,.2f}\n"
+                    output += f"  Average Contract Size: ${avg_amount:,.2f}\n"
+                    output += f"  Number of Contracts (showing first 50): {len(awards)}\n\n"
+
+                    # Aggregate by recipient
+                    recipient_totals = {}
+                    for award in awards:
+                        recipient = award.get("Recipient Name", "Unknown")
+                        amount = float(award.get("Award Amount", 0))
+                        recipient_totals[recipient] = recipient_totals.get(recipient, 0) + amount
+
+                    output += f"TOP {min(10, len(recipient_totals))} CONTRACTORS:\n"
+                    output += "-" * 100 + "\n"
+                    for i, (recipient, total) in enumerate(sorted(recipient_totals.items(), key=lambda x: x[1], reverse=True)[:10], 1):
+                        pct = (total / total_amount * 100) if total_amount > 0 else 0
+                        output += f"  {i}. {recipient}\n"
+                        output += f"     Total Value: ${total:,.2f} ({pct:.1f}%)\n\n"
+                else:
+                    output += "No contracts found matching the specified criteria.\n"
+            else:
+                output += f"Error querying API: {result.get('error')}\n"
+
+        else:
+            # Show reference information for all set-aside types
+            output += "AVAILABLE SET-ASIDE TYPES:\n"
+            output += "-" * 100 + "\n"
+            for sb_key, codes in sb_type_mapping.items():
+                output += f"  • {sb_key.upper()}: {', '.join(codes)}\n"
+
+            output += "\nFEDERAL SB/SET-ASIDE GOALS BY AGENCY:\n"
+            output += "-" * 100 + "\n"
+            output += "  DOD:      23% of contracts to small businesses\n"
+            output += "  GSA:      25% of contracts to small businesses\n"
+            output += "  HHS:      20% of contracts to small businesses\n"
+            output += "  VA:       21% of contracts to small businesses\n"
+            output += "  Average:  ~20-25% across federal government\n\n"
+
+            output += "USAGE TIP:\n"
+            output += "-" * 100 + "\n"
+            output += "Use the sb_type parameter to filter by specific set-aside type:\n"
+            output += "  • analyze_small_business(sb_type='sdvosb') → SDVOSB contracts\n"
+            output += "  • analyze_small_business(sb_type='wosb', agency='gsa') → GSA women-owned contracts\n"
+            output += "  • analyze_small_business(sb_type='8a', fiscal_year='2026') → FY2026 8(a) contracts\n"
 
     except Exception as e:
         output += f"Error: {str(e)}\n"
+        import traceback
+        logger.error(f"Error in analyze_small_business: {traceback.format_exc()}")
 
     output += "\n" + "=" * 100 + "\n"
     return [TextContent(type="text", text=output)]
