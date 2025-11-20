@@ -49,7 +49,22 @@ PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 - "software development" - Search for software contracts
 - "construction" - Find construction projects
 
-### 3. Use with Claude Desktop
+### 3. Docker Quick Start (Optional)
+
+For containerized deployment:
+
+```bash
+# Build and run with Docker Compose
+docker-compose up
+
+# Or build and run manually
+docker build -t usaspending-mcp .
+docker run -p 3002:3002 usaspending-mcp
+```
+
+See `DOCKER_GUIDE.md` for complete Docker setup and deployment options.
+
+### 4. Use with Claude Desktop
 
 ```bash
 # Start the HTTP server
@@ -89,6 +104,7 @@ usaspending-mcp/
 │   ├── guides/                    # User guides & tutorials
 │   │   ├── QUICKSTART.md
 │   │   ├── STRUCTURED_LOGGING_GUIDE.md
+│   │   ├── CONVERSATION_LOGGING_GUIDE.md
 │   │   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
 │   │   ├── FAR_ANALYTICS_GUIDE.md
 │   │   ├── MCP_BEST_PRACTICES_REVIEW.md
@@ -116,6 +132,12 @@ usaspending-mcp/
 │       └── PRODUCTION_MONITORING_GUIDE.md
 ├── requirements.txt               # Python dependencies
 ├── README.md                       # This file
+├── DOCKER_GUIDE.md                # Docker deployment guide
+├── CHANGELOG.md                   # Project changelog
+├── Dockerfile                     # Docker image definition
+├── docker-compose.yml             # Docker Compose orchestration
+├── docker-entrypoint.sh           # Docker entry point script
+├── .dockerignore                  # Docker build optimization
 ├── start_mcp_server.sh            # Start HTTP server for Claude Desktop
 ├── test_mcp_client.sh             # Test client script
 └── LICENSE                        # MIT License
@@ -215,28 +237,66 @@ Once configured, you can ask Claude:
 
 ## Available Tools
 
-### search_federal_awards
+The server provides **26 total MCP tools** across three categories:
 
-Search federal spending data from USASpending.gov.
+### Federal Spending Analysis (22 tools)
 
-**Parameters:**
-- `query` (string, required): Keywords to search for
-- `max_results` (integer, optional): Number of results (default: 5, max: 100)
+**Award Discovery & Lookup**
+- `search_federal_awards` - Search federal awards by keyword, agency, recipient, and time period
+- `get_award_by_id` - Get detailed information about a specific award
+- `get_award_details` - Retrieve comprehensive award details including modifications
+- `get_recipient_details` - Look up award history for specific recipients
+- `get_vendor_by_uei` - Search vendors by Unique Entity ID (UEI)
 
-**Returns:** Formatted list of federal awards with:
-- Recipient name
-- Award ID
-- Amount (formatted: $1.5B, $250M, $75K)
-- Award type
-- Description
+**Spending Analysis & Trends**
+- `analyze_federal_spending` - Analyze spending patterns and trends
+- `get_spending_trends` - Get historical spending trends by agency or category
+- `get_spending_by_state` - Break down federal spending by state
+- `compare_states` - Compare spending metrics across multiple states
+- `emergency_spending_tracker` - Track emergency and disaster funding
 
-**Example:**
+**Agency & Vendor Profiles**
+- `get_agency_profile` - Get comprehensive profile for a federal agency
+- `get_vendor_profile` - Get detailed profile for a vendor or contractor
+
+**Classification & Breakdown Analysis**
+- `get_top_naics_breakdown` - Get top NAICS (industry) classifications
+- `get_naics_psc_info` - Get information about NAICS and PSC codes
+- `get_object_class_analysis` - Analyze spending by object class (budget categories)
+- `get_budget_functions` - Get spending breakdown by budget function codes
+
+**Advanced Analytics**
+- `analyze_small_business` - Analyze small business set-asides and spending
+- `spending_efficiency_metrics` - Calculate spending efficiency metrics
+- `get_disaster_funding` - Get disaster and emergency relief funding data
+- `download_award_data` - Download award data in bulk
+- `get_subaward_data` - Get subaward and subcontract information
+- `get_field_documentation` - Get documentation for USASpending.gov API fields
+
+### FAR (Federal Acquisition Regulation) Tools (5 tools)
+
+- `search_far_regulations` - Keyword search across FAR Parts 14, 15, 16, 19
+- `get_far_section` - Direct lookup of FAR section by number
+- `get_far_topic_sections` - Find FAR sections by topic
+- `get_far_analytics_report` - Generate analytics on FAR section usage
+- `check_far_compliance` - Check FAR compliance requirements
+
+### Conversation Management Tools (4 tools)
+
+- `get_conversation` - Retrieve complete conversation history by ID
+- `list_conversations` - List all conversations for a user with pagination
+- `get_conversation_summary` - Get statistics and summary for a conversation
+- `get_tool_usage_stats` - Get tool usage patterns across conversations
+
+**Example search query:**
 ```python
 {
   "query": "artificial intelligence",
   "max_results": 10
 }
 ```
+
+For comprehensive tool documentation, see the [CLAUDE.md](CLAUDE.md) file or refer to `docs/guides/CONVERSATION_LOGGING_GUIDE.md` for conversation tracking features.
 
 ## Development
 
@@ -358,7 +418,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Changelog
 
-### v2.0.0 (Current)
+For a complete changelog of all releases and improvements, see [CHANGELOG.md](CHANGELOG.md).
+
+### v2.1.0 (Current)
+- ✅ Added conversation management tools (4 new tools)
+  - Track and retrieve conversation history
+  - Get conversation statistics and summaries
+  - Analyze tool usage patterns across conversations
+- ✅ Added Docker support with production-ready Dockerfile
+  - Docker Compose orchestration
+  - Multi-stage build for optimized images
+  - Complete Docker deployment guide
+- ✅ Performance improvements to server.py
+- ✅ Comprehensive conversation logging guide
+
+### v2.0.0
 - ✅ Migrated to FastMCP framework
 - ✅ Added dual transport support (stdio/HTTP)
 - ✅ Improved MCP protocol compliance

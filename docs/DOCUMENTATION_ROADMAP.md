@@ -60,11 +60,13 @@ Deep dive into how the system is designed and what capabilities it offers.
   - Transport modes (stdio vs HTTP)
 
 ### 4. [`reference/tools-catalog.json`](reference/tools-catalog.json)
-- **What**: Complete catalog of all 25 MCP tools with parameters and examples
+- **What**: Complete catalog of all 26 MCP tools with parameters and examples
 - **Why**: Reference for all available functionality
 - **Read if**: Developers, power users, anyone building queries
 - **Key sections**:
-  - Tool definitions
+  - Federal spending tools (22 tools)
+  - FAR regulation tools (5 tools)
+  - Conversation management tools (4 tools)
   - Parameter specifications
   - Usage examples
   - Expected response formats
@@ -116,6 +118,17 @@ Detailed guides for specific features and capabilities.
   - Spending breakdowns
   - Agency-specific queries
 
+### 9. [`guides/CONVERSATION_LOGGING_GUIDE.md`](guides/CONVERSATION_LOGGING_GUIDE.md)
+- **What**: Conversation tracking, retrieval, and analytics capabilities
+- **Why**: Learn how to leverage conversation history for audit trails and analytics
+- **Read if**: System administrators, analytics users, anyone tracking conversation data
+- **Key sections**:
+  - Conversation management tools
+  - Tracking conversation history
+  - Analytics and statistics
+  - Integration patterns
+  - Privacy and data considerations
+
 ---
 
 ## Tier 4: Operations & Best Practices
@@ -154,6 +167,17 @@ Operational guides for running and maintaining the system.
   - Performance best practices
   - Security considerations
 
+### 12. [`../DOCKER_GUIDE.md`](../DOCKER_GUIDE.md)
+- **What**: Complete Docker setup, deployment, and orchestration guide
+- **Why**: Deploy the server in containerized environments
+- **Read if**: DevOps engineers, system administrators, deployment engineers
+- **Key sections**:
+  - Docker image building
+  - Docker Compose orchestration
+  - Environment configuration
+  - Volume management
+  - Production deployment patterns
+
 ---
 
 ## Tier 5: Development & Operations
@@ -162,7 +186,7 @@ Operational guides for running and maintaining the system.
 
 Guides for development, testing, deployment, and monitoring.
 
-### 12. [`dev/TESTING_GUIDE.md`](dev/TESTING_GUIDE.md)
+### 13. [`dev/TESTING_GUIDE.md`](dev/TESTING_GUIDE.md)
 - **What**: Testing strategies and test execution
 - **Why**: Ensure code quality and catch regressions
 - **Read if**: Developers, QA engineers
@@ -172,7 +196,7 @@ Guides for development, testing, deployment, and monitoring.
   - Manual testing procedures
   - Test client usage
 
-### 13. [`dev/SERVER_MANAGER_GUIDE.md`](dev/SERVER_MANAGER_GUIDE.md)
+### 14. [`dev/SERVER_MANAGER_GUIDE.md`](dev/SERVER_MANAGER_GUIDE.md)
 - **What**: Server setup, configuration, and deployment
 - **Why**: Deploy and configure the server in different environments
 - **Read if**: DevOps, system administrators, deployment engineers
@@ -182,7 +206,7 @@ Guides for development, testing, deployment, and monitoring.
   - Environment setup
   - Claude Desktop integration
 
-### 14. [`dev/PRODUCTION_MONITORING_GUIDE.md`](dev/PRODUCTION_MONITORING_GUIDE.md)
+### 15. [`dev/PRODUCTION_MONITORING_GUIDE.md`](dev/PRODUCTION_MONITORING_GUIDE.md)
 - **What**: Monitoring, alerting, and production readiness
 - **Why**: Keep the system healthy and performant in production
 - **Read if**: DevOps, operations engineers, SREs
@@ -192,7 +216,18 @@ Guides for development, testing, deployment, and monitoring.
   - Performance tuning
   - Troubleshooting guide
 
-### 15. [`guides/FUTURE_RECOMMENDATIONS.md`](guides/FUTURE_RECOMMENDATIONS.md)
+### 16. [`../CHANGELOG.md`](../CHANGELOG.md)
+- **What**: Complete project changelog with all releases and improvements
+- **Why**: Track changes, understand what's new, plan upgrades
+- **Read if**: Everyone (reference document for understanding project evolution)
+- **Key sections**:
+  - Version history
+  - Features by release
+  - Performance improvements
+  - Bug fixes
+  - Breaking changes
+
+### 17. [`guides/FUTURE_RECOMMENDATIONS.md`](guides/FUTURE_RECOMMENDATIONS.md)
 - **What**: Suggestions for future enhancements and improvements
 - **Why**: Understand the roadmap and planned improvements
 - **Read if**: Project maintainers, stakeholders, long-term contributors
@@ -243,11 +278,12 @@ Located in `docs/data/far/`:
 1. README.md
 2. guides/QUICKSTART.md
 3. dev/ARCHITECTURE_GUIDE.md
-4. reference/tools-catalog.json
-5. dev/TESTING_GUIDE.md
-6. guides/MCP_BEST_PRACTICES_REVIEW.md
+4. reference/tools-catalog.json (26 tools with examples)
+5. guides/CONVERSATION_LOGGING_GUIDE.md (new - conversation management)
+6. dev/TESTING_GUIDE.md
+7. guides/MCP_BEST_PRACTICES_REVIEW.md
 
-**Total: ~2 hours** - Ready to contribute code!
+**Total: ~2.5 hours** - Ready to contribute code and understand conversation tracking!
 
 ---
 
@@ -256,11 +292,13 @@ Located in `docs/data/far/`:
 2. guides/QUICKSTART.md
 3. dev/ARCHITECTURE_GUIDE.md
 4. dev/SERVER_MANAGER_GUIDE.md
-5. guides/RATE_LIMITING_AND_RETRY_GUIDE.md
-6. guides/STRUCTURED_LOGGING_GUIDE.md
-7. dev/PRODUCTION_MONITORING_GUIDE.md
+5. DOCKER_GUIDE.md (new - Docker deployment)
+6. guides/RATE_LIMITING_AND_RETRY_GUIDE.md
+7. guides/STRUCTURED_LOGGING_GUIDE.md
+8. guides/CONVERSATION_LOGGING_GUIDE.md (new - conversation tracking)
+9. dev/PRODUCTION_MONITORING_GUIDE.md
 
-**Total: ~2 hours** - Ready to deploy and monitor!
+**Total: ~2.5 hours** - Ready to deploy, monitor, and manage conversations!
 
 ---
 
@@ -295,6 +333,7 @@ docs/
 ├── guides/                      # User guides and tutorials
 │   ├── QUICKSTART.md           # 👈 Start here!
 │   ├── STRUCTURED_LOGGING_GUIDE.md
+│   ├── CONVERSATION_LOGGING_GUIDE.md    # ✨ NEW - Conversation tracking
 │   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
 │   ├── FAR_ANALYTICS_GUIDE.md
 │   ├── MCP_BEST_PRACTICES_REVIEW.md
@@ -317,6 +356,12 @@ docs/
 │   ├── reference-data.json
 │   └── usaspending-api-spec.json
 └── DOCUMENTATION_ROADMAP.md     # This file!
+
+Root level:
+├── DOCKER_GUIDE.md              # ✨ NEW - Docker deployment
+├── CHANGELOG.md                 # ✨ NEW - Project changelog
+├── CLAUDE.md                    # Claude Code instructions
+└── README.md                    # Project overview
 ```
 
 ---
@@ -339,7 +384,9 @@ docs/
 | README.md | Overview | 5 min |
 | guides/QUICKSTART.md | Getting started | 10 min |
 | dev/ARCHITECTURE_GUIDE.md | Understanding design | 20 min |
-| reference/tools-catalog.json | Finding tools | 10 min |
+| reference/tools-catalog.json | Finding tools (26 tools) | 10 min |
+| guides/CONVERSATION_LOGGING_GUIDE.md | Conversation tracking | 15 min |
+| DOCKER_GUIDE.md | Docker deployment | 15 min |
 | guides/MULTI_TOOL_ANALYTICS_ARCHITECTURE.md | Advanced workflows | 20 min |
 | guides/FAR_ANALYTICS_GUIDE.md | FAR compliance | 15 min |
 | guides/STRUCTURED_LOGGING_GUIDE.md | Logging & debugging | 15 min |
@@ -347,12 +394,20 @@ docs/
 | dev/TESTING_GUIDE.md | Writing tests | 15 min |
 | dev/SERVER_MANAGER_GUIDE.md | Deployment | 15 min |
 | dev/PRODUCTION_MONITORING_GUIDE.md | Monitoring | 15 min |
+| CHANGELOG.md | Project history | 10 min |
 
 ---
 
 ## Last Updated
 
-November 2, 2025
+November 19, 2025
+
+Recent updates:
+- Added Conversation Logging Guide (NEW)
+- Added Docker deployment guide (NEW)
+- Updated tool count to 26 (added conversation management tools)
+- Updated all learning paths with new features
+- Added CHANGELOG.md reference
 
 ## Contributing
 

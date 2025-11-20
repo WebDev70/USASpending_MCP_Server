@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  usaspending-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: usaspending-mcp-server
+    ports:
+      - "3002:3002"
+    environment:
+      # Set environment variables here if needed
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      # Optional: Mount logs directory for persistence
+      - mcp-logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/mcp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - usaspending-network
+    # Resource limits (optional - adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+volumes:
+  mcp-logs:
+    driver: local
+
+networks:
+  usaspending-network:
+    driver: bridge

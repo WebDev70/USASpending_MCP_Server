@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+.venv
+.env
+.env.local
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+tests/
+pytest.ini
+.pytest_cache
+
+# Documentation
+docs/
+README.md
+CLAUDE.md
+GEMINI.md
+*.md
+
+# Other
+.dockerignore
+Dockerfile
+docker-compose.yml
+server_manager.py
+start_mcp_server.sh
+node_modules/
+npm-debug.log
+yarn-error.log

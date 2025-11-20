@@ -97,6 +97,20 @@ mypy src/
 ./.venv/bin/python server_manager.py stop
 ```
 
+### Docker Deployment
+```bash
+# Build Docker image
+docker build -t usaspending-mcp .
+
+# Run with Docker Compose
+docker-compose up
+
+# Run standalone container
+docker run -p 3002:3002 usaspending-mcp
+```
+
+For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
+
 ## Architecture Overview
 
 ### Core Components
@@ -130,6 +144,10 @@ mypy src/
 - **logging.py**: Structured JSON logging utilities
   - JSON output for HTTP mode only (disabled in stdio mode to avoid MCP protocol conflicts)
   - Includes search analytics and tool execution logging
+- **conversation_logging.py**: Conversation management and analytics
+  - Tracks conversation history and metadata
+  - Provides statistics and tool usage analytics
+  - Enables conversation retrieval and analysis
 - **search_analytics.py**: Tracks and analyzes search patterns
 - **far.py**: FAR database utilities
   - Loads FAR data from JSON files
@@ -177,6 +195,7 @@ src/usaspending_mcp/
     ├── retry.py           # Retry logic with exponential backoff
     ├── rate_limit.py      # Token bucket rate limiter
     ├── logging.py         # Structured logging
+    ├── conversation_logging.py # Conversation tracking and analytics
     ├── search_analytics.py # Search pattern tracking
     └── far.py             # FAR database utilities
 
@@ -187,6 +206,7 @@ docs/
 ├── guides/
 │   ├── QUICKSTART.md
 │   ├── STRUCTURED_LOGGING_GUIDE.md
+│   ├── CONVERSATION_LOGGING_GUIDE.md # Conversation tracking and analytics
 │   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
 │   ├── FAR_ANALYTICS_GUIDE.md
 │   ├── MULTI_TOOL_ANALYTICS_ARCHITECTURE.md
@@ -210,10 +230,18 @@ tests/
 │   └── test_utils_rate_limit.py
 └── integration/
 
+Docker/
+├── Dockerfile              # Production-ready multi-stage build
+├── docker-compose.yml      # Container orchestration
+├── docker-entrypoint.sh    # Entry point script
+└── .dockerignore            # Build optimization
+
 pyproject.toml                 # Modern Python project config (build, dependencies, tools)
 pytest.ini                     # Pytest configuration
 requirements.txt               # Direct dependencies
-IMPLEMENTATION_SUMMARY.md      # Summary of recent implementations (set-asides, etc.)
+IMPLEMENTATION_SUMMARY.md      # Summary of recent implementations
+DOCKER_GUIDE.md               # Docker deployment guide
+CHANGELOG.md                  # Project changelog
 start_mcp_server.sh            # Script to start MCP server in HTTP mode
 server_manager.py              # Manage running server instances
 ```
@@ -222,7 +250,7 @@ server_manager.py              # Manage running server instances
 
 ### Federal Spending Analysis Tools (22 tools)
 
-The server provides comprehensive tools for analyzing federal spending data from USASpending.gov:
+The server provides comprehensive tools for analyzing federal spending data from USASpending.gov and conversations:
 
 **Award Discovery & Lookup**
 - `search_federal_awards` - Search federal awards by agency, recipient, time period, and other filters
@@ -268,7 +296,16 @@ The server provides tools for searching and analyzing federal acquisition regula
 - `get_far_analytics_report` - Generate analytics on FAR section usage and patterns
 - `check_far_compliance` - Check FAR compliance requirements for specific acquisition scenarios
 
-All tools return results via the MCP protocol with automatic rate limiting and retry logic applied.
+### Conversation Management Tools (4 tools)
+
+The server provides tools for tracking and analyzing conversation history:
+
+- `get_conversation` - Retrieve complete conversation history by conversation ID
+- `list_conversations` - List all conversations for a user with pagination support
+- `get_conversation_summary` - Get statistics and summary information for a specific conversation
+- `get_tool_usage_stats` - Get tool usage patterns and statistics for a user across all conversations
+
+All tools return results via the MCP protocol with automatic rate limiting and retry logic applied. For detailed information about conversation tracking, see `docs/guides/CONVERSATION_LOGGING_GUIDE.md`
 
 ## Important Implementation Details
 
@@ -364,6 +401,8 @@ pytest tests/unit/test_tools.py::test_search_federal_awards -v
 2. **Rate limiting**: Global limiter applies to all tools. High-concurrency scenarios may need adjustment.
 3. **Virtual environment**: Always ensure `.venv` is activated when running commands.
 4. **Port conflicts**: When running HTTP server, ensure port 3002 is available or use `server_manager.py` for automatic cleanup.
+5. **Docker binding issues**: The `docker-entrypoint.sh` script handles 0.0.0.0 binding for Docker containers. See `DOCKER_GUIDE.md` for details.
+6. **Untracked files**: `Dockerfile`, `docker-compose.yml`, `DOCKER_GUIDE.md`, and `CONVERSATION_LOGGING_GUIDE.md` are part of the project but untracked in git.
 
 ## Documentation Resources
 
@@ -382,10 +421,15 @@ For deep dives, refer to:
 
 **Implementation Guides**
 - **Logging**: `docs/guides/STRUCTURED_LOGGING_GUIDE.md`
+- **Conversation Tracking**: `docs/guides/CONVERSATION_LOGGING_GUIDE.md`
 - **Rate Limiting**: `docs/guides/RATE_LIMITING_AND_RETRY_GUIDE.md`
 - **FAR Analytics**: `docs/guides/FAR_ANALYTICS_GUIDE.md`
 - **Multi-Tool Analytics**: `docs/guides/MULTI_TOOL_ANALYTICS_ARCHITECTURE.md`
 - **MCP Best Practices**: `docs/guides/MCP_BEST_PRACTICES_REVIEW.md`
+
+**Deployment & Operations**
+- **Docker Deployment**: `DOCKER_GUIDE.md` - Complete Docker setup and deployment instructions
+- **Changelog**: `CHANGELOG.md` - Project version history and recent improvements
 
 **Project Overview**
 - **Implementation Summary**: `IMPLEMENTATION_SUMMARY.md` - Set-aside filtering and recent feature implementations
