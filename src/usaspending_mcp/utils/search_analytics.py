@@ -24,7 +24,7 @@ class SearchAnalytics:
         self,
         tool_name: str = "far",
         analytics_file: Optional[Path] = None,
-        config: Optional[Dict] = None
+        config: Optional[Dict] = None,
     ):
         """
         Initialize analytics tracker.
@@ -60,7 +60,7 @@ class SearchAnalytics:
         filter_value: Optional[str] = None,
         search_type: str = "keyword",
         user_id: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> None:
         """
         Log a search event for analytics.
@@ -81,7 +81,7 @@ class SearchAnalytics:
             "results_count": results_count,
             self.filter_name: filter_value,  # Dynamically use configured filter name
             "user_id": user_id or "anonymous",
-            "success": results_count > 0
+            "success": results_count > 0,
         }
 
         # Add optional metadata
@@ -125,12 +125,14 @@ class SearchAnalytics:
             trending = []
             for keyword, count in sorted(search_counts.items(), key=lambda x: -x[1]):
                 success_rate = success_counts.get(keyword, 0) / count
-                trending.append({
-                    "keyword": keyword,
-                    "searches": count,
-                    "success_rate": success_rate,
-                    "failures": count - success_counts.get(keyword, 0)
-                })
+                trending.append(
+                    {
+                        "keyword": keyword,
+                        "searches": count,
+                        "success_rate": success_rate,
+                        "failures": count - success_counts.get(keyword, 0),
+                    }
+                )
 
             return trending[:limit]
         except Exception as e:
@@ -224,8 +226,8 @@ class SearchAnalytics:
             "summary": {
                 "total_searches": len(self._read_all_records()),
                 "avg_results_per_search": self._avg_results(),
-                "zero_result_percentage": self._zero_result_percentage()
-            }
+                "zero_result_percentage": self._zero_result_percentage(),
+            },
         }
 
     def _read_all_records(self) -> List[Dict]:
@@ -258,10 +260,7 @@ class SearchAnalytics:
 _analytics_instances: Dict[str, SearchAnalytics] = {}
 
 
-def initialize_analytics(
-    tool_name: str = "far",
-    config: Optional[Dict] = None
-) -> SearchAnalytics:
+def initialize_analytics(tool_name: str = "far", config: Optional[Dict] = None) -> SearchAnalytics:
     """
     Initialize analytics instance for a specific tool.
 
@@ -274,10 +273,7 @@ def initialize_analytics(
     """
     global _analytics_instances
     if tool_name not in _analytics_instances:
-        _analytics_instances[tool_name] = SearchAnalytics(
-            tool_name=tool_name,
-            config=config
-        )
+        _analytics_instances[tool_name] = SearchAnalytics(tool_name=tool_name, config=config)
         logger.info(f"Initialized analytics for tool: {tool_name}")
     return _analytics_instances[tool_name]
 

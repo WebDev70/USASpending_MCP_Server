@@ -4,17 +4,18 @@ Shared pytest fixtures and configuration for USASpending MCP Server tests.
 Provides common mocks, fixtures, and utilities for all test suites.
 """
 
-import pytest
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-import httpx
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
+import pytest
 
 # ============================================================================
 # Fixtures: Event Loop
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -27,6 +28,7 @@ def event_loop():
 # ============================================================================
 # Fixtures: Mock HTTP Responses
 # ============================================================================
+
 
 @pytest.fixture
 def mock_award_response():
@@ -41,7 +43,7 @@ def mock_award_response():
                 "Award Date": "2025-01-15",
                 "Contracting Agency": "Department of Defense",
                 "Contract Type": "Fixed Price",
-                "Status": "Active"
+                "Status": "Active",
             }
         ]
     }
@@ -58,7 +60,7 @@ def mock_search_response():
                 "Award Amount": 1000000.00 * i,
                 "Description": f"Contract for service {i}",
                 "Award Date": "2025-01-15",
-                "Contracting Agency": "Department of Defense"
+                "Contracting Agency": "Department of Defense",
             }
             for i in range(1, 6)
         ]
@@ -74,15 +76,13 @@ def mock_empty_response():
 @pytest.fixture
 def mock_error_response():
     """Mock error response from API."""
-    return {
-        "error": "Invalid query",
-        "message": "The search query is malformed"
-    }
+    return {"error": "Invalid query", "message": "The search query is malformed"}
 
 
 # ============================================================================
 # Fixtures: HTTP Client Mocks
 # ============================================================================
+
 
 @pytest.fixture
 def mock_http_client():
@@ -128,6 +128,7 @@ def mock_server_error_response():
 # Fixtures: Logging Mocks
 # ============================================================================
 
+
 @pytest.fixture
 def mock_logger():
     """Create a mock logger."""
@@ -149,10 +150,12 @@ def capture_logs(caplog):
 # Fixtures: Rate Limiter
 # ============================================================================
 
+
 @pytest.fixture
 def rate_limiter():
     """Create a rate limiter for testing."""
     from usaspending_mcp.utils.rate_limit import RateLimiter
+
     return RateLimiter(requests_per_minute=10)
 
 
@@ -160,26 +163,17 @@ def rate_limiter():
 # Fixtures: Test Data
 # ============================================================================
 
+
 @pytest.fixture
 def test_award_ids():
     """List of test award IDs."""
-    return [
-        "47QSWA26P02KE",
-        "47QZ33ZAAA44",
-        "12345678ABCD"
-    ]
+    return ["47QSWA26P02KE", "47QZ33ZAAA44", "12345678ABCD"]
 
 
 @pytest.fixture
 def test_search_queries():
     """List of test search queries."""
-    return [
-        "software",
-        "cloud computing",
-        "infrastructure",
-        "consulting",
-        "training"
-    ]
+    return ["software", "cloud computing", "infrastructure", "consulting", "training"]
 
 
 @pytest.fixture
@@ -190,7 +184,7 @@ def test_vendors():
         "Tech Solutions Inc",
         "Global Systems Ltd",
         "Innovation Partners",
-        "Future Technologies LLC"
+        "Future Technologies LLC",
     ]
 
 
@@ -198,10 +192,12 @@ def test_vendors():
 # Fixtures: Mock FastMCP Server
 # ============================================================================
 
+
 @pytest.fixture
 def mock_server():
     """Create a mock FastMCP server."""
     from fastmcp import FastMCP
+
     return FastMCP(name="test-server")
 
 
@@ -209,17 +205,12 @@ def mock_server():
 # Markers
 # ============================================================================
 
+
 def pytest_configure(config):
     """Register custom pytest markers."""
     config.addinivalue_line(
         "markers", "asyncio: mark test as async (deselect with '-m \"not asyncio\"')"
     )
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")

@@ -4,15 +4,17 @@ Retry logic with exponential backoff for API calls.
 Handles transient failures gracefully with automatic retries.
 """
 
-import httpx
 import logging
 from typing import Any, Callable, TypeVar
+
+import httpx
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,10 +39,21 @@ def is_retryable_http_error(exception: Exception) -> bool:
     return isinstance(exception, RETRYABLE_EXCEPTIONS)
 
 
+def should_retry_on_exception(exception: Exception) -> bool:
+    """Determine if an exception should trigger a retry."""
+    # Retry on transient network errors
+    if isinstance(exception, RETRYABLE_EXCEPTIONS):
+        return True
+    # Retry on retryable HTTP status codes
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in RETRYABLE_STATUS_CODES
+    return False
+
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(RETRYABLE_EXCEPTIONS),
+    retry=retry_if_exception(should_retry_on_exception),
     before_sleep=before_sleep_log(logger, logging.DEBUG),
     reraise=True,
 )

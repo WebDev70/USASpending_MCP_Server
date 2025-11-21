@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting."""
+
     requests_per_minute: int = 60  # Default: 60 requests per minute
     check_interval: float = 0.1  # Check every 100ms if token available
 
@@ -47,9 +48,7 @@ class RateLimiter:
         self.tokens_per_second = requests_per_minute / 60.0
 
         # Track tokens for each unique identifier (e.g., user, IP, tool)
-        self.token_buckets: dict[str, float] = defaultdict(
-            lambda: float(requests_per_minute)
-        )
+        self.token_buckets: dict[str, float] = defaultdict(lambda: float(requests_per_minute))
         self.last_update: dict[str, float] = defaultdict(time.time)
 
         logger.info(
@@ -112,8 +111,7 @@ class RateLimiter:
             waited = time.time() - start_time
             if waited > max_wait:
                 logger.warning(
-                    f"Rate limit timeout for '{identifier}' "
-                    f"after waiting {waited:.1f}s"
+                    f"Rate limit timeout for '{identifier}' " f"after waiting {waited:.1f}s"
                 )
                 raise RuntimeError(
                     f"Rate limit exceeded: waiting >  {max_wait}s for available token"

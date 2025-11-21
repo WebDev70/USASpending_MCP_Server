@@ -45,10 +45,11 @@ A comprehensive guide to understanding, extending, and maintaining this FastMCP-
     ┌───▼──────────┐            ┌───────▼────┐
     │ Tool Layer   │            │ Util Layer │
     │              │            │            │
-    │ 27 Spending  │            │ Rate Limit │
+    │ 22 Spending  │            │ Rate Limit │
     │ Tools        │            │ Retry      │
-    │              │            │ Logging    │
-    │ 5 FAR Tools  │            │ Analytics  │
+    │ 5 FAR Tools  │            │ Logging    │
+    │ 4 Convo      │            │ Analytics  │
+    │ Tools        │            │            │
     └───┬──────────┘            └───────┬────┘
         │                               │
         └───────────────┬───────────────┘
@@ -124,7 +125,7 @@ usaspending-mcp/
 ├── src/usaspending_mcp/              # Main package
 │   ├── __main__.py                   # Entry point: routes to run_server or run_stdio
 │   ├── __init__.py                   # Package exports
-│   ├── server.py                     # Core server: 27 tools + FastMCP setup (~2000 lines)
+│   ├── server.py                     # Core server: 31 tools + FastMCP setup (~2000 lines)
 │   ├── client.py                     # Test client for stdio mode development
 │   │
 │   ├── tools/                        # Tool registration modules
@@ -221,7 +222,7 @@ def format_currency(value: float) -> str:
     """Convert 500000000 to $500M"""
     pass
 
-# SECTION 5: Tool definitions (27 tools)
+# SECTION 5: Tool definitions (31 tools: 22 spending, 5 FAR, 4 conversation)
 @app.tool(name="search_federal_awards", ...)
 async def search_federal_awards(...) -> TextContent:
     pass
@@ -627,6 +628,87 @@ class FARDatabase:
                 if topic not in self.topic_index:
                     self.topic_index[topic] = []
                 self.topic_index[topic].append(section["number"])
+```
+
+### 7. Conversation Management Tools (`utils/conversation_logging.py`)
+
+Provides tools for tracking and analyzing conversation history and user behavior patterns.
+
+#### Conversation Tracking Features
+
+```python
+class ConversationManager:
+    """Manages conversation history and analytics"""
+
+    async def log_tool_execution(self, conversation_id: str, tool_name: str,
+                                  inputs: dict, outputs: dict, duration_ms: float):
+        """Record a tool execution in conversation history"""
+        # Stores: tool name, inputs, outputs, execution time
+        # Updates: conversation timestamps, tool usage counts
+        pass
+
+    async def get_conversation(self, conversation_id: str) -> dict:
+        """Retrieve complete conversation history"""
+        # Returns: all tool calls, inputs, outputs, timeline
+        pass
+
+    async def get_conversation_summary(self, conversation_id: str) -> dict:
+        """Get statistics for a conversation"""
+        # Returns: tool counts, most used tools, avg execution time
+        # Returns: user patterns, common queries
+        pass
+
+    async def get_tool_usage_stats(self, user_id: str) -> dict:
+        """Get tool usage patterns across all conversations"""
+        # Returns: total calls per tool, avg response times
+        # Returns: most frequently used tools, user behavior patterns
+        pass
+```
+
+#### Why Conversation Tracking?
+
+```
+Benefits:
+- Understand user behavior and search patterns
+- Monitor which tools are most valuable
+- Identify performance bottlenecks
+- Track conversation effectiveness
+- Support conversation-based analytics
+
+Use Cases:
+- "Which tools does NASA typically use?"
+- "What's the average execution time for spending analysis?"
+- "Show me all conversations about infrastructure spending"
+- "Which agencies are most queried?"
+- "Trending search topics over time"
+```
+
+#### Conversation Storage
+
+```python
+# Conversation data structure
+{
+    "conversation_id": "conv_abc123",
+    "user_id": "user_xyz",
+    "created_at": "2024-11-20T10:30:00Z",
+    "updated_at": "2024-11-20T10:45:00Z",
+    "tool_calls": [
+        {
+            "tool_name": "search_federal_awards",
+            "inputs": {"query": "space", "max_results": 5},
+            "outputs": {"results_count": 5, "status": "success"},
+            "duration_ms": 845,
+            "timestamp": "2024-11-20T10:30:15Z"
+        },
+        # ... more tool calls
+    ],
+    "statistics": {
+        "total_tools_used": 3,
+        "total_execution_time_ms": 2500,
+        "success_rate": 0.95,
+        "most_used_tool": "search_federal_awards"
+    }
+}
 ```
 
 ---
@@ -1828,6 +1910,7 @@ git commit -m "WIP"
 - `docs/guides/QUICKSTART.md` - Get running in 5 minutes
 - `docs/dev/ARCHITECTURE_GUIDE.md` - Deep architecture dive
 - `docs/dev/TESTING_GUIDE.md` - Testing strategies
+- `docs/guides/CONVERSATION_LOGGING_GUIDE.md` - Conversation tracking and analytics
 - `docs/API_RESOURCES.md` - USASpending.gov API reference
 - Existing tests - Learn from test patterns
 - Existing tools - See how tools are implemented
@@ -1873,14 +1956,16 @@ git commit -m "WIP"
 3. **Write integration tests** for your new tool
 4. **Improve error handling** in an existing tool
 5. **Add caching** to a frequently-called tool
+6. **Explore conversation tracking** - understand how tools are used across conversations
 
 ### Long Term (This Quarter)
 
 1. **Refactor** utilities into separate package
 2. **Add metrics/monitoring** for production
 3. **Implement caching layer** (Redis or similar)
-4. **Create dashboard** for monitoring FAR searches
+4. **Create dashboard** for monitoring FAR searches and conversation analytics
 5. **Optimize** rate limiter for multi-process deployment
+6. **Build analytics engine** for conversation patterns and tool usage trends
 
 ---
 
@@ -1891,7 +1976,7 @@ This USASpending MCP Server demonstrates many important software engineering con
 - **Architecture patterns** - Decorators, singleton, facade, repository
 - **Async programming** - Concurrent requests, non-blocking I/O
 - **Resilience** - Rate limiting, retries, graceful degradation
-- **Observability** - Structured logging, search analytics
+- **Observability** - Structured logging, search analytics, conversation tracking
 - **Testing** - Unit tests, integration tests, mocking
 - **Security** - Input validation, error handling, dependency management
 - **Operations** - Deployment, monitoring, graceful shutdown

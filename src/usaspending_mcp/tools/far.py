@@ -7,19 +7,14 @@ federal acquisition regulations from Parts 14, 15, 16, and 19.
 
 from __future__ import annotations
 
-import re
 import logging
+import re
+
 from mcp.types import TextContent
 
-from usaspending_mcp.utils.far import (
-    get_far_database,
-    initialize_far_database
-)
+from usaspending_mcp.utils.far import get_far_database, initialize_far_database
 from usaspending_mcp.utils.logging import get_logger
-from usaspending_mcp.utils.search_analytics import (
-    initialize_analytics,
-    get_analytics
-)
+from usaspending_mcp.utils.search_analytics import get_analytics, initialize_analytics
 
 logger = get_logger("far_tools")
 
@@ -76,10 +71,10 @@ EXAMPLES:
                 output += "-" * 100 + "\n"
 
                 for result in results[:20]:
-                    section = result['section']
-                    part_num = result['part']
-                    title = result['title'][:40]
-                    relevance = result['relevance']
+                    section = result["section"]
+                    part_num = result["part"]
+                    title = result["title"][:40]
+                    relevance = result["relevance"]
                     output += f"{section:<15} {part_num:<6} {title:<50} {relevance}\n"
 
                 if len(results) > 20:
@@ -93,7 +88,7 @@ EXAMPLES:
                 keyword=keyword,
                 results_count=len(results),
                 filter_value=part,
-                search_type="keyword"
+                search_type="keyword",
             )
 
         except Exception as e:
@@ -142,7 +137,7 @@ EXAMPLES:
                 output += "-" * 100 + "\n"
                 output += "CONTENT:\n"
                 output += "-" * 100 + "\n"
-                output += section['content'] + "\n\n"
+                output += section["content"] + "\n\n"
                 output += f"Reference: {section['url']}\n"
             else:
                 output += f"Section {section_number} not found in FAR database.\n"
@@ -151,9 +146,7 @@ EXAMPLES:
             # Log section lookup for analytics
             analytics = get_analytics("far")
             analytics.log_search(
-                keyword=section_number,
-                results_count=1 if section else 0,
-                search_type="section"
+                keyword=section_number, results_count=1 if section else 0, search_type="section"
             )
 
         except Exception as e:
@@ -205,9 +198,9 @@ EXAMPLES:
                 output += "-" * 100 + "\n"
 
                 for section in sections[:30]:
-                    section_num = section['section']
-                    part_num = section['part']
-                    title = section['title']
+                    section_num = section["section"]
+                    part_num = section["part"]
+                    title = section["title"]
                     output += f"{section_num:<15} {part_num:<6} {title}\n"
 
                 if len(sections) > 30:
@@ -218,10 +211,7 @@ EXAMPLES:
             # Log topic lookup for analytics
             analytics = get_analytics("far")
             analytics.log_search(
-                keyword=topic,
-                results_count=len(sections),
-                filter_value=part,
-                search_type="topic"
+                keyword=topic, results_count=len(sections), filter_value=part, search_type="topic"
             )
 
         except Exception as e:
@@ -373,7 +363,9 @@ EXAMPLES:
 - check_far_compliance("small_business") → Check small business program compliance
 """,
     )
-    async def check_far_compliance(contracting_method: str, requirements: list = None) -> list[TextContent]:
+    async def check_far_compliance(
+        contracting_method: str, requirements: list = None
+    ) -> list[TextContent]:
         """Check FAR compliance for contracting method"""
         output = "=" * 100 + "\n"
         output += f"FAR COMPLIANCE CHECK: {contracting_method}\n"
@@ -388,25 +380,25 @@ EXAMPLES:
             output += f"Method: {compliance['method']}\n"
             output += f"Status: {'COMPLIANT' if compliance['compliant'] else 'POTENTIAL ISSUES'}\n"
 
-            if compliance['part']:
+            if compliance["part"]:
                 output += f"FAR Part: {compliance['part']}\n"
 
-            if compliance.get('issues'):
+            if compliance.get("issues"):
                 output += f"\nIssues:\n"
-                for issue in compliance['issues']:
+                for issue in compliance["issues"]:
                     output += f"  - {issue}\n"
 
-            if compliance.get('relevant_sections'):
+            if compliance.get("relevant_sections"):
                 output += f"\nRelevant FAR Sections:\n"
-                for section in compliance['relevant_sections']:
+                for section in compliance["relevant_sections"]:
                     output += f"  {section['section']}: {section['title']}\n"
 
             # Log compliance check for analytics
             analytics = get_analytics("far")
             analytics.log_search(
                 keyword=contracting_method,
-                results_count=len(compliance.get('relevant_sections', [])),
-                search_type="compliance"
+                results_count=len(compliance.get("relevant_sections", [])),
+                search_type="compliance",
             )
 
         except Exception as e:

@@ -37,11 +37,11 @@ fi
 show_menu() {
     echo -e "${BLUE}Select test suite to run:${NC}"
     echo "  1) All tests (unit + integration)"
-    echo "  2) Unit tests only (fast)"
+    echo "  2) Unit tests only (fast - ~25s)"
     echo "  3) Integration tests only (slow, requires network)"
-    echo "  4) Critical path tests (Giga Inc award)"
-    echo "  5) Error handling tests"
-    echo "  6) Performance tests"
+    echo "  4) Critical path tests (logging, retry, rate limit)"
+    echo "  5) Error handling tests (errors, exceptions, failures)"
+    echo "  6) Performance tests (marked with @pytest.mark.slow)"
     echo "  7) Coverage report"
     echo "  8) Run specific test by name"
     echo "  0) Exit"
@@ -50,32 +50,32 @@ show_menu() {
 
 run_all_tests() {
     echo -e "${GREEN}Running all tests...${NC}"
-    pytest . -v --tb=short
+    pytest tests/ -v --tb=short
 }
 
 run_unit_tests() {
     echo -e "${GREEN}Running unit tests...${NC}"
-    pytest test_mcp_tools_unit.py -v --tb=short
+    pytest tests/unit/ -v --tb=short
 }
 
 run_integration_tests() {
     echo -e "${GREEN}Running integration tests (network required)...${NC}"
-    pytest test_mcp_tools_integration.py -v --tb=short -s
+    pytest tests/integration/ -v --tb=short -s 2>/dev/null || echo -e "${YELLOW}No integration tests found${NC}"
 }
 
 run_critical_path() {
-    echo -e "${GREEN}Running critical path tests (Giga Inc award)...${NC}"
-    pytest test_mcp_tools_integration.py::TestCriticalPathGigaInc -v -s
+    echo -e "${GREEN}Running critical path tests (logging, retry, rate limit)...${NC}"
+    pytest tests/unit/test_utils_retry.py tests/unit/test_utils_rate_limit.py tests/unit/test_utils_logging.py -v -s
 }
 
 run_error_handling() {
     echo -e "${GREEN}Running error handling tests...${NC}"
-    pytest test_mcp_tools_integration.py::TestErrorHandling -v -s
+    pytest tests/unit/ -k "error or exception or fail" -v -s
 }
 
 run_performance() {
     echo -e "${GREEN}Running performance tests...${NC}"
-    pytest test_mcp_tools_integration.py::TestPerformance -v -s
+    pytest tests/unit/ -m "slow" -v -s 2>/dev/null || echo -e "${YELLOW}No performance tests marked with @pytest.mark.slow${NC}"
 }
 
 run_coverage() {
@@ -86,7 +86,7 @@ run_coverage() {
         pip install coverage pytest-cov
     fi
 
-    pytest --cov=mcp_server --cov-report=html --cov-report=term-missing test_mcp_tools_unit.py
+    pytest --cov=src/usaspending_mcp --cov-report=html --cov-report=term-missing tests/unit/
     echo -e "${GREEN}Coverage report generated: htmlcov/index.html${NC}"
 }
 

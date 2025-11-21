@@ -8,9 +8,9 @@ search, lookup, and compliance checking capabilities.
 import json
 import os
 import re
-from typing import Optional, Dict, List, Tuple
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from usaspending_mcp.utils.logging import get_logger
 
@@ -50,10 +50,10 @@ class FARDatabase:
         for path in far_paths:
             if path.exists():
                 try:
-                    with open(path, 'r') as f:
+                    with open(path, "r") as f:
                         data = json.load(f)
                         # Extract part number from filename (far_part14.json -> 14)
-                        part_num = path.stem.split('_')[-1].replace("part", "")
+                        part_num = path.stem.split("_")[-1].replace("part", "")
                         self.parts[f"Part {part_num}"] = data
                         # Data is already in sections format (section_number: {title, content})
                         self._index_sections(part_num, data)
@@ -72,7 +72,7 @@ class FARDatabase:
                 "part": part_num,
                 "number": section_num,
                 "title": section_data.get("title", ""),
-                "content": section_data.get("content", "")
+                "content": section_data.get("content", ""),
             }
 
     def _build_topics_index(self):
@@ -137,13 +137,15 @@ class FARDatabase:
 
             if title_matches > 0 or content_matches > 0:
                 relevance_score = (title_matches * 3) + content_matches
-                results.append({
-                    "section": section_num,
-                    "part": section["part"],
-                    "title": section.get("title", ""),
-                    "relevance": relevance_score,
-                    "preview": self._get_preview(content, keyword_lower),
-                })
+                results.append(
+                    {
+                        "section": section_num,
+                        "part": section["part"],
+                        "title": section.get("title", ""),
+                        "relevance": relevance_score,
+                        "preview": self._get_preview(content, keyword_lower),
+                    }
+                )
 
         # Sort by relevance
         results.sort(key=lambda x: x["relevance"], reverse=True)
@@ -166,7 +168,7 @@ class FARDatabase:
                 "part": section["part"],
                 "title": section["title"],
                 "content": section["content"],
-                "url": f"https://www.acquisition.gov/far/part-{section['part']}#{section_number}"
+                "url": f"https://www.acquisition.gov/far/part-{section['part']}#{section_number}",
             }
         return None
 
@@ -191,11 +193,9 @@ class FARDatabase:
             results = []
             for section_num, section in self.all_sections.items():
                 if section["part"] == target_part:
-                    results.append({
-                        "section": section_num,
-                        "part": section["part"],
-                        "title": section["title"]
-                    })
+                    results.append(
+                        {"section": section_num, "part": section["part"], "title": section["title"]}
+                    )
             return results
 
         # Fall back to keyword search
@@ -216,18 +216,21 @@ class FARDatabase:
             "sealed_bidding": {
                 "part": "14",
                 "requires": ["IFB", "competitive range", "evaluation criteria"],
-                "prohibits": ["negotiations", "best value trade-offs"]
+                "prohibits": ["negotiations", "best value trade-offs"],
             },
             "negotiation": {
                 "part": "15",
                 "requires": ["RFP", "source selection", "evaluation factors"],
-                "prohibits": ["sealed bidding procedures"]
+                "prohibits": ["sealed bidding procedures"],
             },
             "small_business": {
                 "part": "19",
-                "requires": ["size determination", "North American Industry Classification System (NAICS)"],
-                "prohibits": []
-            }
+                "requires": [
+                    "size determination",
+                    "North American Industry Classification System (NAICS)",
+                ],
+                "prohibits": [],
+            },
         }
 
         method_key = method.lower().replace(" ", "_")
@@ -238,7 +241,7 @@ class FARDatabase:
                 "method": method,
                 "compliant": False,
                 "message": f"Unknown contracting method: {method}",
-                "issues": [f"Unknown method: {method}"]
+                "issues": [f"Unknown method: {method}"],
             }
 
         # Check requirements
@@ -258,9 +261,8 @@ class FARDatabase:
             "part": part,
             "issues": issues if issues else ["No compliance issues found"],
             "relevant_sections": [
-                {"section": s["number"], "title": s["title"]}
-                for s in relevant_sections
-            ]
+                {"section": s["number"], "title": s["title"]} for s in relevant_sections
+            ],
         }
 
     def _get_preview(self, text: str, keyword: str, context_length: int = 100) -> str:
@@ -288,7 +290,7 @@ class FARDatabase:
             "parts_indexed": {
                 f"Part {part_num}": len(sections.get("sections", {}))
                 for part_num, sections in self.parts.items()
-            }
+            },
         }
 
 
@@ -301,7 +303,9 @@ def initialize_far_database() -> FARDatabase:
     global _far_db
     if _far_db is None:
         _far_db = FARDatabase()
-        logger.info(f"Initialized FAR database with {_far_db.get_statistics()['total_sections']} sections")
+        logger.info(
+            f"Initialized FAR database with {_far_db.get_statistics()['total_sections']} sections"
+        )
     return _far_db
 
 

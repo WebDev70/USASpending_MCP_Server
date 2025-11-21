@@ -31,7 +31,7 @@ def load_far_all_parts() -> dict:
             project_root = os.path.dirname(os.path.dirname(current_dir))
             far_file = os.path.join(project_root, "docs", "data", "far", f"far_part{part_num}.json")
 
-            with open(far_file, 'r') as f:
+            with open(far_file, "r") as f:
                 part_data = json.load(f)
                 far_data[f"part{part_num}"] = part_data
                 logger.info(f"Loaded FAR Part {part_num}: {len(part_data)} sections")
@@ -51,7 +51,7 @@ def get_part_names() -> dict:
         14: "Sealed Bidding",
         15: "Contracting by Negotiation",
         16: "Types of Contracts",
-        19: "Small Business Programs"
+        19: "Small Business Programs",
     }
 
 
@@ -61,7 +61,7 @@ def get_part_descriptions() -> dict:
         "part14": "Alternative to negotiated procurement for competitive sealed bidding",
         "part15": "Negotiated procurement procedures and best value selection",
         "part16": "Contract types (fixed-price, cost-reimbursement, IDIQ, etc.)",
-        "part19": "Small business set-asides and programs (8(a), HUBZone, WOSB, etc.)"
+        "part19": "Small business set-asides and programs (8(a), HUBZone, WOSB, etc.)",
     }
 
 
@@ -71,5 +71,5 @@ def get_full_part_names() -> dict:
         "part14": "PART 14 - SEALED BIDDING",
         "part15": "PART 15 - CONTRACTING BY NEGOTIATION",
         "part16": "PART 16 - TYPES OF CONTRACTS",
-        "part19": "PART 19 - SMALL BUSINESS PROGRAMS"
+        "part19": "PART 19 - SMALL BUSINESS PROGRAMS",
     }

@@ -5,6 +5,7 @@ Stores complete conversation context including tool calls, parameters, responses
 and execution metrics for debugging, analytics, and conversation reconstruction.
 """
 
+import inspect
 import json
 import logging
 import time
@@ -13,7 +14,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
-import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,7 @@ CONVERSATIONS_BASE_DIR = Path("/tmp/mcp_conversations")
 class ConversationLogger:
     """Log and retrieve MCP conversation context."""
 
-    def __init__(
-        self,
-        conversations_dir: Optional[Path] = None,
-        config: Optional[Dict] = None
-    ):
+    def __init__(self, conversations_dir: Optional[Path] = None, config: Optional[Dict] = None):
         """
         Initialize conversation logger.
 
@@ -64,7 +60,7 @@ class ConversationLogger:
         message_index: Optional[int] = None,
         status: str = "success",
         error_message: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
         Log a tool call within a conversation.
@@ -92,7 +88,7 @@ class ConversationLogger:
         response_text = output_response
         if self.max_message_length and len(response_text) > self.max_message_length:
             response_text = (
-                response_text[:self.max_message_length]
+                response_text[: self.max_message_length]
                 + f"\n[... truncated {len(output_response) - self.max_message_length} chars ...]"
             )
 
@@ -114,26 +110,20 @@ class ConversationLogger:
             record.update(metadata)
 
         # Store to file with user_id and conversation_id naming
-        conversation_file = (
-            self.conversations_dir / user_id / f"{conversation_id}.jsonl"
-        )
+        conversation_file = self.conversations_dir / user_id / f"{conversation_id}.jsonl"
         conversation_file.parent.mkdir(parents=True, exist_ok=True)
 
         try:
             with open(conversation_file, "a") as f:
                 f.write(json.dumps(record) + "\n")
-            logger.debug(
-                f"Logged tool call: {tool_name} in conversation {conversation_id}"
-            )
+            logger.debug(f"Logged tool call: {tool_name} in conversation {conversation_id}")
         except Exception as e:
             logger.error(f"Failed to log conversation: {e}")
 
         return record
 
     def get_conversation(
-        self,
-        conversation_id: str,
-        user_id: str = "anonymous"
+        self, conversation_id: str, user_id: str = "anonymous"
     ) -> List[Dict[str, Any]]:
         """
         Retrieve a complete conversation by ID.
@@ -145,9 +135,7 @@ class ConversationLogger:
         Returns:
             List of tool call records in chronological order
         """
-        conversation_file = (
-            self.conversations_dir / user_id / f"{conversation_id}.jsonl"
-        )
+        conversation_file = self.conversations_dir / user_id / f"{conversation_id}.jsonl"
 
         if not conversation_file.exists():
             logger.warning(f"Conversation {conversation_id} not found for user {user_id}")
@@ -165,9 +153,7 @@ class ConversationLogger:
             return []
 
     def list_user_conversations(
-        self,
-        user_id: str = "anonymous",
-        limit: int = 20
+        self, user_id: str = "anonymous", limit: int = 20
     ) -> List[Dict[str, Any]]:
         """
         List all conversations for a user.
@@ -185,33 +171,34 @@ class ConversationLogger:
 
         conversations = []
         try:
-            for conv_file in sorted(user_dir.glob("*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True)[:limit]:
+            for conv_file in sorted(
+                user_dir.glob("*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True
+            )[:limit]:
                 conversation_id = conv_file.stem
                 records = []
                 with open(conv_file, "r") as f:
                     records = [json.loads(line) for line in f]
 
                 if records:
-                    conversations.append({
-                        "conversation_id": conversation_id,
-                        "user_id": user_id,
-                        "message_count": len(records),
-                        "first_message": records[0]["timestamp"],
-                        "last_message": records[-1]["timestamp"],
-                        "tools_used": list(set(r["tool_name"] for r in records)),
-                        "success_count": sum(1 for r in records if r["status"] == "success"),
-                        "error_count": sum(1 for r in records if r["status"] == "error"),
-                    })
+                    conversations.append(
+                        {
+                            "conversation_id": conversation_id,
+                            "user_id": user_id,
+                            "message_count": len(records),
+                            "first_message": records[0]["timestamp"],
+                            "last_message": records[-1]["timestamp"],
+                            "tools_used": list(set(r["tool_name"] for r in records)),
+                            "success_count": sum(1 for r in records if r["status"] == "success"),
+                            "error_count": sum(1 for r in records if r["status"] == "error"),
+                        }
+                    )
         except Exception as e:
             logger.error(f"Failed to list conversations for user {user_id}: {e}")
 
         return conversations
 
     def search_conversations(
-        self,
-        tool_name: Optional[str] = None,
-        user_id: str = "anonymous",
-        limit: int = 10
+        self, tool_name: Optional[str] = None, user_id: str = "anonymous", limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
         Search conversations by tool name.
@@ -227,17 +214,12 @@ class ConversationLogger:
         conversations = self.list_user_conversations(user_id, limit=100)
 
         if tool_name:
-            conversations = [
-                c for c in conversations
-                if tool_name in c.get("tools_used", [])
-            ]
+            conversations = [c for c in conversations if tool_name in c.get("tools_used", [])]
 
         return conversations[:limit]
 
     def get_conversation_summary(
-        self,
-        conversation_id: str,
-        user_id: str = "anonymous"
+        self, conversation_id: str, user_id: str = "anonymous"
     ) -> Optional[Dict[str, Any]]:
         """
         Get summary statistics for a conversation.
@@ -274,13 +256,10 @@ class ConversationLogger:
                 "success": success_count,
                 "error": error_count,
                 "other": len(records) - success_count - error_count,
-            }
+            },
         }
 
-    def get_tool_usage_stats(
-        self,
-        user_id: str = "anonymous"
-    ) -> Dict[str, Any]:
+    def get_tool_usage_stats(self, user_id: str = "anonymous") -> Dict[str, Any]:
         """
         Get statistics on tool usage for a user.
 
@@ -310,9 +289,7 @@ class ConversationLogger:
         # Calculate success rates
         for tool, stats in tool_stats.items():
             stats["success_rate"] = (
-                (stats["success_count"] / stats["uses"] * 100)
-                if stats["uses"] > 0
-                else 0
+                (stats["success_count"] / stats["uses"] * 100) if stats["uses"] > 0 else 0
             )
 
         return {
@@ -323,10 +300,7 @@ class ConversationLogger:
         }
 
     def export_conversation(
-        self,
-        conversation_id: str,
-        user_id: str = "anonymous",
-        format: str = "json"
+        self, conversation_id: str, user_id: str = "anonymous", format: str = "json"
     ) -> Optional[str]:
         """
         Export a conversation in various formats.
@@ -352,7 +326,7 @@ class ConversationLogger:
                 f"=== Conversation {conversation_id} ===",
                 f"User: {user_id}",
                 f"Messages: {len(records)}",
-                ""
+                "",
             ]
             for i, record in enumerate(records, 1):
                 lines.append(f"--- Message {i} ---")
@@ -369,9 +343,7 @@ class ConversationLogger:
             return "\n".join(lines)
 
         elif format == "csv":
-            lines = [
-                "timestamp,conversation_id,user_id,tool_name,status,execution_time_ms"
-            ]
+            lines = ["timestamp,conversation_id,user_id,tool_name,status,execution_time_ms"]
             for record in records:
                 lines.append(
                     f"{record['timestamp']},{record['conversation_id']},{record['user_id']},"
@@ -386,9 +358,7 @@ class ConversationLogger:
 _conversation_logger: Optional[ConversationLogger] = None
 
 
-def initialize_conversation_logger(
-    config: Optional[Dict] = None
-) -> ConversationLogger:
+def initialize_conversation_logger(config: Optional[Dict] = None) -> ConversationLogger:
     """
     Initialize global conversation logger instance.
 
@@ -417,10 +387,7 @@ def get_conversation_logger() -> ConversationLogger:
     return _conversation_logger
 
 
-def log_conversation(
-    user_id: Optional[str] = None,
-    conversation_id: Optional[str] = None
-):
+def log_conversation(user_id: Optional[str] = None, conversation_id: Optional[str] = None):
     """
     Decorator to automatically log MCP tool calls to conversation history.
 
@@ -457,7 +424,7 @@ def log_conversation(
                     # Handle list[TextContent]
                     output_parts = []
                     for item in result:
-                        if hasattr(item, 'text'):
+                        if hasattr(item, "text"):
                             output_parts.append(item.text)
                         else:
                             output_parts.append(str(item))
@@ -482,7 +449,7 @@ def log_conversation(
                 user_id=user_id or "anonymous",
                 conversation_id=conversation_id,
                 status=status,
-                error_message=error_msg
+                error_message=error_msg,
             )
 
             # Re-raise if there was an error
@@ -508,7 +475,7 @@ def log_conversation(
                 if isinstance(result, list):
                     output_parts = []
                     for item in result:
-                        if hasattr(item, 'text'):
+                        if hasattr(item, "text"):
                             output_parts.append(item.text)
                         else:
                             output_parts.append(str(item))
@@ -533,7 +500,7 @@ def log_conversation(
                 user_id=user_id or "anonymous",
                 conversation_id=conversation_id,
                 status=status,
-                error_message=error_msg
+                error_message=error_msg,
             )
 
             # Re-raise if there was an error

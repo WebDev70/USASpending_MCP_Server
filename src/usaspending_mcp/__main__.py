@@ -4,8 +4,8 @@ USASpending MCP Server Entry Point
 This module provides the command-line entry point for the MCP server.
 """
 
-import sys
 import asyncio
+import sys
 
 
 def main():

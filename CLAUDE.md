@@ -248,7 +248,7 @@ server_manager.py              # Manage running server instances
 
 ## Available Tools
 
-### Federal Spending Analysis Tools (22 tools)
+### Federal Spending Analysis Tools (24 tools)
 
 The server provides comprehensive tools for analyzing federal spending data from USASpending.gov and conversations:
 
@@ -273,11 +273,13 @@ The server provides comprehensive tools for analyzing federal spending data from
 **Classification & Breakdown Analysis**
 - `get_top_naics_breakdown` - Get top NAICS (industry) classifications by spending
 - `get_naics_psc_info` - Get information about NAICS and PSC codes
+- `get_naics_trends` - Track NAICS industry trends and year-over-year growth by sector
 - `get_object_class_analysis` - Analyze spending by object class (budget categories)
 - `get_budget_functions` - Get spending breakdown by budget function codes
 
 **Advanced Analytics**
 - `analyze_small_business` - Analyze small business set-asides and spending
+- `get_top_vendors_by_contract_count` - Get top vendors ranked by number of contracts awarded (not dollar value)
 - `spending_efficiency_metrics` - Calculate spending efficiency metrics and ratios
 - `get_disaster_funding` - Get disaster and emergency relief funding data
 

@@ -30,7 +30,8 @@ This project answers those questions by:
 - Built with **Python** (a programming language)
 - Uses **FastMCP** (a framework for connecting to AI assistants like Claude)
 - Works with **real government data** from USASpending.gov
-- Can handle **32 different tools** to analyze federal spending
+- Can handle **31 different tools** to analyze federal spending and track conversations
+- Includes **conversation management** to track and analyze interaction history
 
 ---
 
@@ -177,7 +178,9 @@ The formatted results go back to Claude or the user through the MCP Protocol.
 This is the **main file** where everything happens.
 
 **What it does:**
-- Defines 27 different tools for analyzing federal spending
+- Defines 22 different tools for analyzing federal spending
+- Registers 5 FAR regulation tools
+- Provides 4 conversation management tools
 - Sets up the FastMCP app
 - Initializes the rate limiter
 - Creates the HTTP client
@@ -473,7 +476,7 @@ PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 ```
 usaspending-mcp/
 ├── src/usaspending_mcp/
-│   ├── server.py           ← Main file (32 tools)
+│   ├── server.py           ← Main file (31 tools)
 │   ├── client.py           ← Test client
 │   ├── tools/
 │   │   └── far.py          ← FAR regulation tools
@@ -523,7 +526,7 @@ def format_currency(value):
     # ... code
 
 # ═══════════════════════════════════════════
-# SECTION 4: TOOL DEFINITIONS (27 tools)
+# SECTION 4: TOOL DEFINITIONS (31 tools)
 # ═══════════════════════════════════════════
 @app.tool(name="search_federal_awards")
 async def search_federal_awards(query: str, max_results: int = 10):
@@ -776,9 +779,9 @@ Tool execution
 
 ---
 
-## The 32 Tools Explained
+## The 31 Tools Explained
 
-### Federal Spending Tools (27 tools)
+### Federal Spending Tools (22 tools)
 
 These are grouped by what they help you analyze:
 
@@ -818,6 +821,21 @@ These search federal acquisition rules:
 3. **get_far_topic_sections** - Find by topic
 4. **get_far_analytics_report** - See usage patterns
 5. **check_far_compliance** - Check if something follows rules
+
+### Conversation Management Tools (4 tools)
+
+These tools track and analyze interaction history and user behavior:
+
+1. **get_conversation** - Retrieve complete conversation history by ID
+2. **list_conversations** - List all conversations for a user with pagination
+3. **get_conversation_summary** - Get statistics and summary information for a specific conversation
+4. **get_tool_usage_stats** - Get tool usage patterns and statistics across all conversations
+
+**Why these matter:**
+- Understand how users interact with the system
+- Track which tools are most popular
+- Analyze conversation patterns and trends
+- Support user analytics and system improvement
 
 ---
 
@@ -958,6 +976,8 @@ python server_manager.py stop
 2. Write unit tests for a tool
 3. Add better error handling to a tool
 4. Modify the rate limiter settings
+5. Explore how conversation management tools track user behavior
+6. Analyze tool usage patterns from conversation logs
 
 ### Advanced Level
 1. Add a new transport mode (besides HTTP and stdio)
@@ -973,6 +993,7 @@ python server_manager.py stop
 - `docs/guides/QUICKSTART.md` - Get started quickly
 - `docs/dev/ARCHITECTURE_GUIDE.md` - Deep architecture dive
 - `docs/dev/TESTING_GUIDE.md` - How testing works
+- `docs/guides/CONVERSATION_LOGGING_GUIDE.md` - Understanding conversation tracking and analytics
 - `docs/API_RESOURCES.md` - USASpending API reference
 
 **External Resources:**

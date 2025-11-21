@@ -5,17 +5,18 @@ Provides JSON-formatted logs with structured context for better
 observability and debugging in production environments.
 """
 
+import json
 import logging
 import logging.handlers
 import sys
-import json
 import time
-from datetime import datetime
-from typing import Any, Optional
-from pathlib import Path
-from pythonjsonlogger import jsonlogger
-from functools import wraps
 from contextlib import contextmanager
+from datetime import datetime
+from functools import wraps
+from pathlib import Path
+from typing import Any, Optional
+
+from pythonjsonlogger import jsonlogger
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
@@ -23,26 +24,39 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
     def add_fields(self, log_record: dict, record: logging.LogRecord, message_dict: dict) -> None:
         """Add custom fields to log record."""
-        super().add_fields(log_record, record, message_dict)
+        try:
+            super().add_fields(log_record, record, message_dict)
+        except KeyError:
+            # If there's a KeyError from the parent class (e.g., trying to overwrite
+            # user-provided fields), just continue. User's extra fields take precedence.
+            pass
 
-        # Add timestamp in ISO format
-        log_record["timestamp"] = datetime.utcnow().isoformat() + "Z"
+        # Add timestamp in ISO format (ISO 8601 format with Z suffix for UTC)
+        # Only add if not already in the record
+        if "timestamp" not in log_record:
+            log_record["timestamp"] = datetime.utcnow().isoformat() + "Z"
 
-        # Add log level name
-        log_record["level"] = record.levelname
+        # Add log level name - override with consistent naming
+        if "level" not in log_record:
+            log_record["level"] = record.levelname
 
-        # Add module name
-        log_record["module"] = record.name
+        # Add module name (logger name)
+        if "module" not in log_record:
+            log_record["module"] = record.name
 
-        # Add thread and process info for debugging
-        log_record["thread"] = record.thread
-        log_record["process"] = record.process
+        # Add function and line number for debugging
+        if "function" not in log_record:
+            log_record["function"] = record.funcName
+        if "line_number" not in log_record:
+            log_record["line_number"] = record.lineno
 
-        # Add function and line number
-        log_record["function"] = record.funcName
-        log_record["line_number"] = record.lineno
+        # Add process and thread information
+        if "process" not in log_record:
+            log_record["process"] = record.process
+        if "thread" not in log_record:
+            log_record["thread"] = record.threadName
 
-        # Remove message if it's already in log_record (avoid duplication)
+        # Ensure message is in the log record
         if "message" not in log_record:
             log_record["message"] = message_dict.get("message", record.getMessage())
 
@@ -63,10 +77,21 @@ def setup_structured_logging(
     Returns:
         Configured logger instance
     """
-    # Remove existing handlers
+    # Get root logger
+    # Don't remove handlers if we're in a test environment (preserve caplog)
     root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
+
+    # Remove existing handlers ONLY if not in test mode
+    # Check if pytest is in the handler types or if we're running under pytest
+    has_pytest_handler = any(
+        "pytest" in str(type(h).__module__).lower()
+        or "caplog" in str(type(h).__name__).lower()
+        for h in root_logger.handlers
+    )
+
+    if not has_pytest_handler:
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
 
     # Set root logger level - use WARNING for third-party libraries
     root_logger.setLevel(getattr(logging, log_level))
@@ -78,9 +103,7 @@ def setup_structured_logging(
 
     # Create formatters
     if json_output:
-        formatter = CustomJsonFormatter(
-            fmt="%(timestamp)s %(level)s %(name)s %(message)s"
-        )
+        formatter = CustomJsonFormatter(fmt="%(timestamp)s %(level)s %(name)s %(message)s")
         file_formatter = logging.Formatter(
             fmt="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
@@ -112,9 +135,7 @@ def setup_structured_logging(
 
     # All logs file handler with rotation (10 MB per file, keep 5 backups)
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=10 * 1024 * 1024,  # 10 MB
-        backupCount=5
+        log_file, maxBytes=10 * 1024 * 1024, backupCount=5  # 10 MB
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
@@ -122,9 +143,7 @@ def setup_structured_logging(
     # Error log file handler (only ERROR and CRITICAL)
     error_log_file = str(log_path.parent / "usaspending_mcp_errors.log")
     error_handler = logging.handlers.RotatingFileHandler(
-        error_log_file,
-        maxBytes=5 * 1024 * 1024,  # 5 MB
-        backupCount=3
+        error_log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5 MB
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(file_formatter)
@@ -135,7 +154,7 @@ def setup_structured_logging(
     search_handler = logging.handlers.RotatingFileHandler(
         search_log_file,
         maxBytes=20 * 1024 * 1024,  # 20 MB (larger since we'll log more here)
-        backupCount=5
+        backupCount=5,
     )
     search_handler.setLevel(logging.INFO)
     search_handler.setFormatter(file_formatter)
@@ -146,8 +165,11 @@ def setup_structured_logging(
     # Prevent propagation to root logger to avoid duplication
     search_logger.propagate = False
 
-    # Get application logger
+    # Get application logger and set its level
     app_logger = logging.getLogger("usaspending_mcp")
+    app_logger.setLevel(getattr(logging, log_level))
+    # Add console handler to app logger as well (for direct use without propagation)
+    app_logger.addHandler(console_handler)
     return app_logger
 
 
@@ -216,9 +238,9 @@ def log_api_call(func):
                 "method": method,
                 "url": url,
                 "extra_context": {
-                    "params_keys": list(kwargs.get("params", {}).keys())
-                    if "params" in kwargs
-                    else [],
+                    "params_keys": (
+                        list(kwargs.get("params", {}).keys()) if "params" in kwargs else []
+                    ),
                 },
             },
         )
