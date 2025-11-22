@@ -152,6 +152,19 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 - **far.py**: FAR database utilities
   - Loads FAR data from JSON files
   - Provides search and lookup operations with caching
+- **query_context.py**: Query refinement and conversation-aware filtering
+  - Extracts filter patterns from conversation history
+  - Suggests progressive refinements for large result sets (>50 results)
+  - Tracks user preferences and query patterns
+- **result_aggregation.py**: Result summarization and explanation
+  - Aggregates similar awards by recipient or industry classification (NAICS)
+  - Generates match explanations showing why results matched the query
+  - Provides recipient-based and industry-based summaries
+- **relevance_scoring.py**: Intelligent result ranking
+  - Scores awards based on keyword match quality and field placement
+  - Weights recipient matches higher than partial matches
+  - Integrates conversation context for relevance boosting
+  - Provides confidence scores (0-100) for each result
 
 **5. Client (`src/usaspending_mcp/client.py`)**
 - MCP protocol client for testing/debugging
@@ -164,9 +177,14 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 2. **Rate Limiting Check** → Global rate limiter validates request
 3. **Retry Loop** → Decorated API call with exponential backoff
 4. **USASpending API** → Fetch federal spending data
-5. **Response Formatting** → Format results with currency notation and descriptions
-6. **Logging** → Structured logging of tool execution and searches
-7. **Return to Client** → TextContent response via MCP protocol
+5. **Query Refinement** (optional) → Apply intelligence to results:
+   - **Relevance Scoring**: Score awards by keyword match quality
+   - **Result Aggregation**: Group similar awards by recipient/industry
+   - **Explanations**: Show why each result matched the query
+   - **Progressive Filtering**: Suggest refinements for large result sets (>50 results)
+6. **Response Formatting** → Format results with currency notation and descriptions
+7. **Logging** → Structured logging of tool execution and searches
+8. **Return to Client** → TextContent response via MCP protocol
 
 ### Key Architectural Decisions
 
@@ -176,6 +194,9 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 - **FAR Data as JSON Files**: Enables offline regulation lookup without API calls
 - **Modular Tool Registration**: FAR tools registered separately via `register_far_tools()`
 - **Agency/Award Type Mappings**: Comprehensive normalization for API filtering
+- **Query Refinement as Optional Features**: `aggregate_results`, `sort_by_relevance`, `include_explanations` parameters on `search_federal_awards` are all opt-in for backwards compatibility
+- **Conversation-Aware Filtering**: Leverages existing ConversationLogger to extract context without requiring new data storage
+- **Progressive Enhancement**: Query refinement features degrade gracefully; if analysis fails, standard results are returned
 
 ## Project Structure
 
@@ -197,7 +218,10 @@ src/usaspending_mcp/
     ├── logging.py         # Structured logging
     ├── conversation_logging.py # Conversation tracking and analytics
     ├── search_analytics.py # Search pattern tracking
-    └── far.py             # FAR database utilities
+    ├── far.py             # FAR database utilities
+    ├── query_context.py   # Query refinement and progressive filtering
+    ├── result_aggregation.py # Result grouping and explanations
+    └── relevance_scoring.py # Intelligent result ranking and scoring
 
 docs/
 ├── DOCUMENTATION_ROADMAP.md          # Learning paths by role
@@ -227,7 +251,10 @@ tests/
 │   ├── test_tools.py
 │   ├── test_utils_retry.py
 │   ├── test_utils_logging.py
-│   └── test_utils_rate_limit.py
+│   ├── test_utils_rate_limit.py
+│   ├── test_query_context.py # Tests for query context analysis
+│   ├── test_aggregation.py # Tests for result aggregation
+│   └── test_relevance_scoring.py # Tests for relevance scoring
 └── integration/
 
 Docker/
@@ -254,6 +281,7 @@ The server provides comprehensive tools for analyzing federal spending data from
 
 **Award Discovery & Lookup**
 - `search_federal_awards` - Search federal awards by agency, recipient, time period, and other filters
+  - **Advanced Features**: `aggregate_results` (group by recipient), `sort_by_relevance` (intelligent ranking), `include_explanations` (show match reasons)
 - `get_award_by_id` - Retrieve detailed information about a specific award
 - `get_award_details` - Get comprehensive award details including modifications and attachments
 - `get_recipient_details` - Look up award history for a specific recipient
@@ -366,6 +394,38 @@ Structured logging is configured with:
 
 Search logs and tool execution logs are tracked separately and can feed analytics.
 
+### Query Refinement Features
+
+The `search_federal_awards` tool includes advanced result refinement capabilities:
+
+**Progressive Filtering Suggestions**
+- Automatically suggests refinement filters when result set exceeds 50 awards
+- Suggests filtering by: set-aside type, award type, state, fiscal year, amount range
+- Example: `search_federal_awards("IT contracts")` → Returns suggestions if >50 results found
+
+**Result Aggregation**
+- Groups similar awards by recipient or industry classification (NAICS)
+- Shows aggregate summaries: "15 awards to Acme Corp ($50M total)"
+- Use with `aggregate_results=True` parameter
+
+**Match Explanations**
+- Shows why each award matched the query
+- Indicates which fields matched (recipient name, description, NAICS, PSC)
+- Includes confidence scores (0-100) for each match
+- Enabled by default with `include_explanations=True`
+
+**Intelligent Ranking**
+- Scores awards based on keyword match quality and field importance
+- Exact keyword matches weighted higher than partial matches
+- Recipient name matches weighted higher than description matches
+- Use with `sort_by_relevance=True` parameter
+
+**Conversation Context Awareness**
+- Analyzes previous queries in the conversation
+- Remembers user preferences and filter patterns
+- Uses conversation history to boost relevance of contextually relevant results
+- Automatic—leverages existing ConversationLogger
+
 ## Testing Strategy
 
 ### Test Organization
@@ -405,6 +465,7 @@ pytest tests/unit/test_tools.py::test_search_federal_awards -v
 4. **Port conflicts**: When running HTTP server, ensure port 3002 is available or use `server_manager.py` for automatic cleanup.
 5. **Docker binding issues**: The `docker-entrypoint.sh` script handles 0.0.0.0 binding for Docker containers. See `DOCKER_GUIDE.md` for details.
 6. **Untracked files**: `Dockerfile`, `docker-compose.yml`, `DOCKER_GUIDE.md`, and `CONVERSATION_LOGGING_GUIDE.md` are part of the project but untracked in git.
+7. **Query Refinement graceful degradation**: If conversation context extraction fails, standard results are returned. Query refinement features are wrapped in try/except and don't break the search tool.
 
 ## Documentation Resources
 

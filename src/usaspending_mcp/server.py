@@ -36,6 +36,11 @@ from usaspending_mcp.utils.logging import (
     setup_structured_logging,
 )
 
+# Import query refinement utilities
+from usaspending_mcp.utils.query_context import QueryContextAnalyzer
+from usaspending_mcp.utils.result_aggregation import ResultAggregator
+from usaspending_mcp.utils.relevance_scoring import RelevanceScorer
+
 # Detect if running in stdio mode - if so, disable JSON output to avoid protocol conflicts
 # JSON logging interferes with MCP protocol communication on stdio
 is_stdio_mode = len(sys.argv) > 1 and sys.argv[1] == "--stdio"
@@ -59,6 +64,12 @@ logger.info("Rate limiter initialized: 60 requests/minute")
 # Initialize conversation logger for tracking MCP tool interactions
 conversation_logger = initialize_conversation_logger()
 logger.info("Conversation logger initialized")
+
+# Initialize query refinement utilities
+query_context_analyzer = QueryContextAnalyzer()
+result_aggregator = ResultAggregator()
+relevance_scorer = RelevanceScorer()
+logger.info("Query refinement utilities initialized")
 
 # Register modular tool sets
 # FAR tools are registered from the usaspending_mcp.tools module
@@ -891,8 +902,17 @@ async def search_federal_awards(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     set_aside_type: Optional[str] = None,
+    aggregate_results: bool = False,
+    sort_by_relevance: bool = False,
+    include_explanations: bool = True,
 ) -> list[TextContent]:
     """Search for federal awards with advanced query syntax, optional date range, and set-aside filters.
+
+    ADVANCED RESULT REFINEMENT OPTIONS:
+    ===================================
+    - aggregate_results: Group similar awards by recipient and show summaries (default: False)
+    - sort_by_relevance: Rank results by relevance to query keywords (default: False)
+    - include_explanations: Show why each award matched the query (default: True)
 
     DOCUMENTATION REFERENCES:
     ========================
@@ -910,7 +930,9 @@ async def search_federal_awards(
     ================================
     - search_federal_awards("GSA contracts", set_aside_type="SDVOSB")
     - search_federal_awards("contracts amount:50K-500K", set_aside_type="WOSB")
-    - search_federal_awards("software contracts", set_aside_type="8A")"""
+    - search_federal_awards("software contracts", set_aside_type="8A")
+    - search_federal_awards("IT contracts", sort_by_relevance=True)
+    - search_federal_awards("cloud services", aggregate_results=True)"""
     logger.debug(
         f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}, set_aside_type={set_aside_type}"
     )
@@ -945,6 +967,9 @@ async def search_federal_awards(
             "output_format": output_format,
             "start_date": actual_start_date,
             "end_date": actual_end_date,
+            "aggregate_results": aggregate_results,
+            "sort_by_relevance": sort_by_relevance,
+            "include_explanations": include_explanations,
         }
     )
 
@@ -1466,16 +1491,20 @@ async def analyze_awards_logic(args: dict) -> list[TextContent]:
 
     # Only add keywords if they are provided and meet minimum length requirement (3 chars)
     keywords = args.get("keywords")
-    if keywords and keywords.strip() and len(keywords.strip()) >= 3:
-        filters["keywords"] = [keywords.strip()]
-    elif keywords and keywords.strip() and len(keywords.strip()) < 3:
-        # Return error if keywords are too short
-        return [
-            TextContent(
-                type="text",
-                text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
-            )
-        ]
+    # Skip keyword validation if other filters (agency, recipient) are specified
+    has_filters = args.get("toptier_agency") or args.get("subtier_agency") or args.get("recipient_name")
+
+    if keywords and keywords.strip() and keywords != "*":
+        if len(keywords.strip()) >= 3:
+            filters["keywords"] = [keywords.strip()]
+        elif not has_filters:
+            # Return error if keywords are too short and no other filters provided
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
+                )
+            ]
 
     # Add optional filters
     if args.get("place_of_performance_scope"):
@@ -1704,16 +1733,20 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
 
     # Only add keywords if they are provided and meet minimum length requirement (3 chars)
     keywords = args.get("keywords")
-    if keywords and keywords.strip() and len(keywords.strip()) >= 3:
-        filters["keywords"] = [keywords.strip()]
-    elif keywords and keywords.strip() and len(keywords.strip()) < 3:
-        # Return error if keywords are too short
-        return [
-            TextContent(
-                type="text",
-                text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
-            )
-        ]
+    # Skip keyword validation if other filters (agency, recipient) are specified
+    has_filters = args.get("toptier_agency") or args.get("subtier_agency") or args.get("recipient_name")
+
+    if keywords and keywords.strip() and keywords != "*":
+        if len(keywords.strip()) >= 3:
+            filters["keywords"] = [keywords.strip()]
+        elif not has_filters:
+            # Return error if keywords are too short and no other filters provided
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
+                )
+            ]
 
     # Add place of performance scope filter if specified (domestic/foreign)
     if args.get("place_of_performance_scope"):
@@ -1891,12 +1924,66 @@ async def search_awards_logic(args: dict) -> list[TextContent]:
     # Handle different output formats
     output_format = args.get("output_format", "text")
 
+    # Extract options for result refinement
+    sort_by_relevance = args.get("sort_by_relevance", False)
+    include_explanations = args.get("include_explanations", True)
+    aggregate_results = args.get("aggregate_results", False)
+
+    # Extract keywords for explanations and context
+    query_keywords = args.get("keywords", "").split() if args.get("keywords") else []
+
+    # Apply relevance scoring and sorting if requested
+    if sort_by_relevance and query_keywords:
+        filtered_awards = relevance_scorer.sort_by_relevance(
+            filtered_awards,
+            query_keywords,
+            context=None
+        )
+
     if output_format == "csv":
         # Generate CSV output
         output = format_awards_as_csv(filtered_awards, total_count, current_page, has_next)
     else:
         # Generate text output (default)
-        output = format_awards_as_text(filtered_awards, total_count, current_page, has_next)
+        if include_explanations and query_keywords:
+            # Use format with explanations
+            output = result_aggregator.format_awards_with_explanations(
+                filtered_awards,
+                query_keywords,
+                total_count,
+                current_page,
+                has_next
+            )
+        else:
+            # Use standard format
+            output = format_awards_as_text(filtered_awards, total_count, current_page, has_next)
+
+    # Add progressive filtering suggestions for large result sets
+    if total_count > 50:
+        # Try to extract conversation context
+        try:
+            conversation_records = conversation_logger.get_conversation(
+                conversation_id=args.get("conversation_id", ""),
+                user_id="anonymous"
+            )
+            context = query_context_analyzer.extract_filters_from_conversation(conversation_records)
+            suggestion = query_context_analyzer.suggest_refinement_filters(total_count, context)
+            if suggestion:
+                output += suggestion
+        except Exception as e:
+            logger.debug(f"Could not extract conversation context: {e}")
+
+    # Add aggregation summary if requested
+    if aggregate_results and len(filtered_awards) > 3:
+        try:
+            aggregation_summary = result_aggregator.generate_aggregated_summary(
+                filtered_awards,
+                aggregation_type="recipient",
+                limit=5
+            )
+            output += "\n\n" + aggregation_summary
+        except Exception as e:
+            logger.debug(f"Could not generate aggregation summary: {e}")
 
     # Log successful search for analytics
     log_search(
@@ -2203,7 +2290,7 @@ async def get_spending_trends(
                 "dhs": "Department of Homeland Security",
             }
             if agency.lower() in agency_map:
-                filters["agencies"] = [{"name": agency_map[agency.lower()], "tier": "toptier"}]
+                filters["agencies"] = [{"type": "awarding", "name": agency_map[agency.lower()], "tier": "toptier"}]
 
         payload = {
             "group_by": "fiscal_year" if period == "fiscal_year" else "calendar_year",
@@ -2470,7 +2557,7 @@ async def get_agency_profile(agency: str, detail_level: str = "detail") -> list[
         url = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
         payload = {
             "filters": {
-                "agencies": [{"name": agency_name, "tier": "toptier"}],
+                "agencies": [{"type": "awarding", "name": agency_name, "tier": "toptier"}],
                 "award_type_codes": ["A", "B", "C", "D"],
             },
             "fields": ["Award ID", "Recipient Name", "Award Amount", "Awarding Subagency"],
@@ -3221,7 +3308,7 @@ async def spending_efficiency_metrics(
                 "hhs": "Department of Health and Human Services",
             }
             if agency.lower() in agency_map:
-                filters["agencies"] = [{"name": agency_map[agency.lower()], "tier": "toptier"}]
+                filters["agencies"] = [{"type": "awarding", "name": agency_map[agency.lower()], "tier": "toptier"}]
 
         payload = {
             "filters": filters,
