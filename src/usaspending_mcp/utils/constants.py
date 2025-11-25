@@ -1,6 +1,43 @@
-"""Constants for USASpending MCP Server."""
+"""
+Constants for USASpending MCP Server.
 
-# Award type mapping
+WHAT ARE CONSTANTS?
+Constants are values that never change while the program is running.
+Instead of typing the same value over and over in different places,
+we define it once here and reference it everywhere.
+
+Think of constants like a dictionary of official names:
+- If someone types "dod", we know they mean "Department of Defense"
+- If someone types "nasa", we know they mean "National Aeronautics and Space Administration"
+
+WHY USE CONSTANTS?
+1. Avoid Typos: One place to define the official name
+2. Easy to Update: Change it once, used everywhere
+3. Readable Code: Names are clearer than abbreviations
+4. Less Repetition: DRY (Don't Repeat Yourself) principle
+
+THIS FILE CONTAINS:
+- AWARD_TYPE_MAP: Maps simple names to official federal award type codes
+- TOPTIER_AGENCY_MAP: Maps many variations of agency names to official names
+- SUBTIER_AGENCY_MAP: Maps specific sub-divisions within departments
+"""
+
+# ============ AWARD TYPE MAPPING ============
+# WHAT IS THIS?
+# Federal awards fall into different categories (contracts, grants, loans, etc.)
+# Each category has official codes used by the USASpending API
+# This dictionary lets users type "grant" and we convert it to the official codes
+#
+# HOW IT WORKS:
+# If user searches for "grants", we look up AWARD_TYPE_MAP["grant"]
+# and get ["02", "03", "04", "05"]
+# These official codes are sent to the USASpending.gov API
+#
+# THE CODES:
+# Contracts: A, B, C, D
+# Grants: 02, 03, 04, 05
+# Loans: 07, 08, 09
+# Insurance: 10, 11
 AWARD_TYPE_MAP = {
     "contract": ["A", "B", "C", "D"],
     "grant": ["02", "03", "04", "05"],
@@ -8,7 +45,29 @@ AWARD_TYPE_MAP = {
     "insurance": ["10", "11"],
 }
 
-# Top-tier agency mapping (normalized to API format) - COMPREHENSIVE
+# ============ TOP-TIER AGENCY MAPPING ============
+# WHAT IS THIS?
+# A "top-tier agency" is a major federal department like Defense or Energy
+# Users might type different variations: "dod", "defense", "pentagon"
+# This mapping converts all variations to the official name: "Department of Defense"
+#
+# WHY VARIATIONS?
+# Different people know different names:
+# - Some know the abbreviation: "dod"
+# - Some know the full name: "defense department"
+# - Some know the slang: "pentagon"
+# Our job is to understand all of them!
+#
+# HOW IT WORKS:
+# User types: "Find contracts from dod"
+# We look up: TOPTIER_AGENCY_MAP.get("dod")
+# We get: "Department of Defense"
+# We send that to the API
+#
+# EXAMPLE AGENCIES:
+# - Department of Defense (DoD, pentagon, military)
+# - Department of Veterans Affairs (VA, veterans)
+# - NASA (space administration, aeronautics)
 TOPTIER_AGENCY_MAP = {
     # Department of Defense
     "dod": "Department of Defense",
@@ -113,8 +172,29 @@ TOPTIER_AGENCY_MAP = {
     "neh": "National Endowment for the Humanities",
 }
 
+# ============ SUB-TIER AGENCY MAPPING ============
+# WHAT IS A SUB-TIER AGENCY?
+# Some departments are so big they have smaller divisions inside them
+# Examples:
+# - Department of Defense has: Navy, Army, Air Force, Marine Corps, etc.
+# - Department of Homeland Security has: Coast Guard, TSA, Border Protection, etc.
+#
+# WHY IS THIS IMPORTANT?
+# Sometimes a user wants contracts from just the Navy, not all of Defense
+# User might say: "navy", "usn", "department navy"
+# We need to understand all these variations!
+#
+# HOW THE DATA IS STORED:
+# Each sub-tier agency is stored as: (parent_agency, official_subtier_name)
+# Example: "navy" -> ("Department of Defense", "Department of the Navy")
+# This helps us know both who the parent is AND the official sub-tier name
+#
+# REAL WORLD ANALOGY:
+# Think of a school district:
+# - Top-tier: School District (like Department of Defense)
+# - Sub-tier: Individual schools (like Navy, Army, Air Force)
+#
 # Sub-tier agency mapping (normalized to API format) - COMPREHENSIVE
-# Format: "subtier_name" -> ("parent_agency_name", "subtier_official_name")
 SUBTIER_AGENCY_MAP = {
     # ============ DEPARTMENT OF DEFENSE ============
     # Military Departments

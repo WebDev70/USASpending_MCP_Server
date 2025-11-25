@@ -165,8 +165,19 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
   - Weights recipient matches higher than partial matches
   - Integrates conversation context for relevance boosting
   - Provides confidence scores (0-100) for each result
+- **constants.py**: Centralized constants for the application
+  - Award type mappings (contracts, grants, loans, insurance)
+  - Top-tier agency mappings for normalization
 
-**5. Client (`src/usaspending_mcp/client.py`)**
+**5. Configuration (`src/usaspending_mcp/config.py`)**
+- **ServerConfig**: Centralized configuration management
+  - Server settings: port, host, log level
+  - API settings: timeout, base URL
+  - Rate limiting: requests per minute
+  - FAR settings: data path
+  - Environment variable support with validation
+
+**6. Client (`src/usaspending_mcp/client.py`)**
 - MCP protocol client for testing/debugging
 - stdio transport implementation
 - Interactive query interface
@@ -204,6 +215,7 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 src/usaspending_mcp/
 ├── server.py              # FastMCP app, tool definitions, API integration
 ├── client.py              # MCP client for testing
+├── config.py              # Server configuration management
 ├── __init__.py            # Package exports
 ├── __main__.py            # Entry point
 ├── tools/
@@ -213,6 +225,8 @@ src/usaspending_mcp/
 │   ├── __init__.py
 │   └── far.py             # FAR data loading
 └── utils/
+    ├── __init__.py
+    ├── constants.py       # Centralized constants and mappings
     ├── retry.py           # Retry logic with exponential backoff
     ├── rate_limit.py      # Token bucket rate limiter
     ├── logging.py         # Structured logging
