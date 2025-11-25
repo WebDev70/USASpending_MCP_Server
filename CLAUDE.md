@@ -115,16 +115,50 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 
 ### Core Components
 
-**1. Server (`src/usaspending_mcp/server.py`)**
-- FastMCP application initialization
-- MCP tool definitions (`@app.tool` decorator)
+**1. Server (`src/usaspending_mcp/server.py`)** - REFACTORED 2024!
+- FastMCP application initialization (now only 199 lines, was 4,515!)
+- Imports tool modules and coordinates registration
 - USASpending.gov API integration
 - Dual transport support (stdio/HTTP with uvicorn)
 - Rate limiting and retry logic applied globally
 - Award type and agency mappings
 
-**2. Tools Module (`src/usaspending_mcp/tools/`)**
-- **far.py**: Registers FAR (Federal Acquisition Regulation) MCP tools
+**2. Tools Module (`src/usaspending_mcp/tools/`)** - MODULAR ARCHITECTURE
+- **__init__.py**: Coordinates registration of all tool modules via `register_all_tools()`
+- **helpers.py**: Shared utilities (QueryParser, formatters, URL generators)
+- **awards.py**: Award discovery tools (6 tools)
+  - `search_federal_awards` - Search by keyword, agency, recipient
+  - `get_award_by_id` - Retrieve specific award
+  - `get_award_details` - Comprehensive award information
+  - `get_recipient_details` - Award history for recipient
+  - `get_vendor_by_uei` - Search vendors by UEI
+  - `get_subaward_data` - Subaward and subcontract information
+- **spending.py**: Spending analysis tools (8 tools)
+  - `analyze_federal_spending` - Spending overview by agency/type
+  - `get_spending_trends` - Historical spending trends
+  - `get_spending_by_state` - Geographic spending breakdown
+  - `compare_states` - Compare spending metrics
+  - `emergency_spending_tracker` - Emergency/disaster funding
+  - `spending_efficiency_metrics` - Efficiency calculations
+  - `get_disaster_funding` - Disaster relief funding data
+  - `get_budget_functions` - Spending by budget function
+- **classifications.py**: Classification analysis tools (5 tools)
+  - `get_top_naics_breakdown` - Top NAICS classifications
+  - `get_naics_psc_info` - NAICS/PSC code information
+  - `get_naics_trends` - Industry trends and growth
+  - `get_object_class_analysis` - Budget category analysis
+  - `get_field_documentation` - USASpending.gov field documentation
+- **profiles.py**: Vendor and agency profile tools (4 tools)
+  - `get_agency_profile` - Federal agency profile
+  - `get_vendor_profile` - Vendor/contractor profile
+  - `get_top_vendors_by_contract_count` - Top vendors by contract count
+  - `analyze_small_business` - Small business set-asides analysis
+- **conversations.py**: Conversation management tools (4 tools)
+  - `get_conversation` - Retrieve conversation history
+  - `list_conversations` - List user conversations with pagination
+  - `get_conversation_summary` - Conversation statistics and summary
+  - `get_tool_usage_stats` - Tool usage patterns and statistics
+- **far.py**: FAR (Federal Acquisition Regulation) tools (5 tools)
   - `search_far_regulations` - Keyword search across FAR Parts 14, 15, 16, 19
   - `get_far_section` - Direct lookup by section number
   - `get_far_topic_sections` - Find sections by topic
@@ -209,18 +243,24 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 - **Conversation-Aware Filtering**: Leverages existing ConversationLogger to extract context without requiring new data storage
 - **Progressive Enhancement**: Query refinement features degrade gracefully; if analysis fails, standard results are returned
 
-## Project Structure
+## Project Structure (After 2024 Refactoring)
 
 ```
 src/usaspending_mcp/
-├── server.py              # FastMCP app, tool definitions, API integration
+├── server.py              # FastMCP app initialization (199 lines, was 4,515!)
 ├── client.py              # MCP client for testing
 ├── config.py              # Server configuration management
 ├── __init__.py            # Package exports
 ├── __main__.py            # Entry point
-├── tools/
-│   ├── __init__.py
-│   └── far.py             # FAR tool registration
+├── tools/                 # MODULAR TOOL ARCHITECTURE
+│   ├── __init__.py        # register_all_tools() coordinator
+│   ├── helpers.py         # Shared utilities (QueryParser, formatters)
+│   ├── awards.py          # Award discovery tools (6 tools)
+│   ├── spending.py        # Spending analysis tools (8 tools)
+│   ├── classifications.py # NAICS/PSC analysis tools (5 tools)
+│   ├── profiles.py        # Vendor/agency profile tools (4 tools)
+│   ├── conversations.py   # Conversation management tools (4 tools)
+│   └── far.py             # FAR regulation tools (5 tools)
 ├── loaders/
 │   ├── __init__.py
 │   └── far.py             # FAR data loading
@@ -287,48 +327,43 @@ start_mcp_server.sh            # Script to start MCP server in HTTP mode
 server_manager.py              # Manage running server instances
 ```
 
-## Available Tools
+## Available Tools - 27 Tools Organized by 6 Modules
 
-### Federal Spending Analysis Tools (24 tools)
+### Module 1: Award Discovery Tools (6 tools - `tools/awards.py`)
 
-The server provides comprehensive tools for analyzing federal spending data from USASpending.gov and conversations:
-
-**Award Discovery & Lookup**
 - `search_federal_awards` - Search federal awards by agency, recipient, time period, and other filters
   - **Advanced Features**: `aggregate_results` (group by recipient), `sort_by_relevance` (intelligent ranking), `include_explanations` (show match reasons)
 - `get_award_by_id` - Retrieve detailed information about a specific award
 - `get_award_details` - Get comprehensive award details including modifications and attachments
 - `get_recipient_details` - Look up award history for a specific recipient
 - `get_vendor_by_uei` - Search vendors by Unique Entity ID (UEI)
+- `get_subaward_data` - Get subaward and subcontract information
 
-**Spending Analysis & Trends**
+### Module 2: Spending Analysis Tools (8 tools - `tools/spending.py`)
+
 - `analyze_federal_spending` - Analyze spending patterns and trends
 - `get_spending_trends` - Get historical spending trends by agency or category
 - `get_spending_by_state` - Break down federal spending by state
 - `compare_states` - Compare spending metrics across multiple states
 - `emergency_spending_tracker` - Track emergency and disaster funding
+- `spending_efficiency_metrics` - Calculate spending efficiency metrics and ratios
+- `get_disaster_funding` - Get disaster and emergency relief funding data
+- `get_budget_functions` - Get spending breakdown by budget function codes
 
-**Agency & Vendor Profiles**
-- `get_agency_profile` - Get comprehensive profile for a federal agency
-- `get_vendor_profile` - Get detailed profile for a vendor or contractor
+### Module 3: Classification & Breakdown Analysis (5 tools - `tools/classifications.py`)
 
-**Classification & Breakdown Analysis**
 - `get_top_naics_breakdown` - Get top NAICS (industry) classifications by spending
 - `get_naics_psc_info` - Get information about NAICS and PSC codes
 - `get_naics_trends` - Track NAICS industry trends and year-over-year growth by sector
 - `get_object_class_analysis` - Analyze spending by object class (budget categories)
-- `get_budget_functions` - Get spending breakdown by budget function codes
-
-**Advanced Analytics**
-- `analyze_small_business` - Analyze small business set-asides and spending
-- `get_top_vendors_by_contract_count` - Get top vendors ranked by number of contracts awarded (not dollar value)
-- `spending_efficiency_metrics` - Calculate spending efficiency metrics and ratios
-- `get_disaster_funding` - Get disaster and emergency relief funding data
-
-**Data Export & Utilities**
-- `download_award_data` - Download award data in bulk
-- `get_subaward_data` - Get subaward and subcontract information
 - `get_field_documentation` - Get documentation for USASpending.gov API fields
+
+### Module 4: Vendor & Agency Profile Tools (4 tools - `tools/profiles.py`)
+
+- `get_agency_profile` - Get comprehensive profile for a federal agency
+- `get_vendor_profile` - Get detailed profile for a vendor or contractor
+- `get_top_vendors_by_contract_count` - Get top vendors ranked by number of contracts awarded (not dollar value)
+- `analyze_small_business` - Analyze small business set-asides and spending
 
 ### FAR (Federal Acquisition Regulation) Tools (5 tools)
 
@@ -353,18 +388,33 @@ All tools return results via the MCP protocol with automatic rate limiting and r
 
 ## Important Implementation Details
 
-### Adding New Tools
+### Adding New Tools (Modular Approach)
 
-Tools are registered using the FastMCP decorator:
+In the refactored architecture, tools are defined inside a `register_tools()` function in the appropriate module file (e.g., `tools/spending.py`):
+
 ```python
-@app.tool(
-    name="tool_name",
-    description="Tool description with parameters and returns"
-)
-async def tool_function(param1: str, param2: int = 5) -> TextContent:
-    # Implementation
-    return TextContent(type="text", text=result)
+def register_tools(
+    app, http_client, rate_limiter, base_url, logger_instance,
+    award_type_map, toptier_agency_map, subtier_agency_map
+) -> None:
+    """Register all spending analysis tools"""
+
+    @app.tool(
+        name="tool_name",
+        description="Tool description with parameters and returns"
+    )
+    async def tool_function(param1: str, param2: int = 5) -> TextContent:
+        # Can access http_client, rate_limiter, logger_instance via closure!
+        await rate_limiter.wait_if_needed("default")
+        response = await http_client.get(f"{base_url}/endpoint", params={})
+        return TextContent(type="text", text=result)
 ```
+
+**Key Points:**
+- Tools are defined INSIDE `register_tools()` function
+- Tool functions access shared dependencies (http_client, rate_limiter, logger) via closure
+- No need to modify server.py or tools/__init__.py
+- Tool is automatically registered by existing registration flow
 
 Tools are automatically rate-limited and retry logic can be applied via `@make_api_call_with_retry` decorator.
 

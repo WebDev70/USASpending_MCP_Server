@@ -30,8 +30,9 @@ This project answers those questions by:
 - Built with **Python** (a programming language)
 - Uses **FastMCP** (a framework for connecting to AI assistants like Claude)
 - Works with **real government data** from USASpending.gov
-- Can handle **31 different tools** to analyze federal spending and track conversations
+- Can handle **27 different tools** to analyze federal spending, regulations, and conversations
 - Includes **conversation management** to track and analyze interaction history
+- **Recently refactored** into modular architecture (2024): server.py reduced from 4,515 lines to 199 lines!
 
 ---
 
@@ -173,30 +174,53 @@ The formatted results go back to Claude or the user through the MCP Protocol.
 
 ## The Key Components
 
-### Component 1: `server.py` (The Headquarters)
+### Component 1: `server.py` (The Headquarters - REFACTORED!)
 
-This is the **main file** where everything happens.
+This is the **main initialization file** that sets everything up and coordinates all tool modules.
 
-**What it does:**
-- Defines 22 different tools for analyzing federal spending
-- Registers 5 FAR regulation tools
-- Provides 4 conversation management tools
-- Sets up the FastMCP app
+**What it does (now very focused):**
+- Creates the FastMCP app (the main framework)
 - Initializes the rate limiter
-- Creates the HTTP client
-- Handles all tool definitions
+- Sets up the HTTP client
+- **Registers all modular tool modules** (see below)
+- Handles server startup (HTTP and stdio modes)
 
-**Analogy:** This is like the CEO's office - it makes all the big decisions and coordinates the whole company.
+**Analogy:** This is like the reception desk - it greets visitors, checks them in, and routes them to the right department.
 
-**Some tools it provides:**
-```python
-@app.tool(name="search_federal_awards")
-async def search_federal_awards(query: str, max_results: int = 10) -> TextContent:
-    """Search for federal awards"""
-    # Make API call
-    # Format results
-    # Return to user
+**NEW: Modular Tool Architecture (2024 Refactoring)**
+
+Instead of one giant 4,515-line file, tools are now organized into focused modules:
+
 ```
+tools/
+├── __init__.py         ← Coordinates all registrations
+├── helpers.py          ← Shared utilities (QueryParser, formatters, URL generators)
+├── awards.py           ← 6 award discovery tools
+├── spending.py         ← 8 spending analysis tools
+├── classifications.py  ← 5 classification analysis tools
+├── profiles.py         ← 4 profile tools
+├── conversations.py    ← 4 conversation management tools
+└── far.py              ← 5 FAR regulation tools
+```
+
+**How registration works:**
+```python
+# In server.py (now only 199 lines):
+from usaspending_mcp.tools import register_all_tools
+
+register_all_tools(
+    app,                    # FastMCP app
+    http_client,            # For API calls
+    rate_limiter,           # For rate limiting
+    base_url,              # API URL
+    logger,                # For logging
+    award_type_map,        # For parsing queries
+    toptier_agency_map,    # For agency names
+    subtier_agency_map     # For sub-agency names
+)
+```
+
+This pattern allows each tool module to access dependencies via **closures** (a Python concept explained in the Advanced Concepts section).
 
 ### Component 2: `tools/far.py` (The Regulation Specialist)
 
@@ -471,36 +495,49 @@ PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
 
 ## Understanding the Code
 
-### File Structure
+### File Structure (After 2024 Refactoring)
 
 ```
 usaspending-mcp/
 ├── src/usaspending_mcp/
-│   ├── server.py           ← Main file (31 tools)
+│   ├── server.py           ← Main file (199 lines - just setup & coordination)
 │   ├── client.py           ← Test client
 │   ├── tools/
-│   │   └── far.py          ← FAR regulation tools
+│   │   ├── __init__.py     ← Tool registration coordinator
+│   │   ├── helpers.py      ← Shared utilities (720 lines)
+│   │   ├── awards.py       ← Award discovery tools (1,296 lines, 6 tools)
+│   │   ├── spending.py     ← Spending analysis tools (1,165 lines, 8 tools)
+│   │   ├── classifications.py ← NAICS/PSC tools (1,385 lines, 5 tools)
+│   │   ├── profiles.py     ← Profile tools (673 lines, 4 tools)
+│   │   ├── conversations.py ← Conversation tools (337 lines, 4 tools)
+│   │   └── far.py          ← FAR regulation tools (5 tools)
 │   ├── loaders/
 │   │   └── far.py          ← Load FAR data
 │   └── utils/
 │       ├── rate_limit.py   ← Token bucket
 │       ├── retry.py        ← Retry logic
 │       ├── logging.py      ← Structured logging
+│       ├── conversation_logging.py ← Conversation tracking
 │       ├── search_analytics.py  ← Track searches
+│       ├── query_context.py ← Query refinement
+│       ├── result_aggregation.py ← Result grouping
+│       ├── relevance_scoring.py ← Smart ranking
 │       └── far.py          ← FAR database
 │
 ├── docs/
 │   ├── data/far/           ← FAR regulation JSON files
-│   └── guides/             ← Documentation
+│   ├── guides/             ← Documentation
+│   └── archived/           ← This guide and JUNIOR_DEVELOPER_GUIDE.md
 │
 ├── tests/                  ← Unit tests
+├── REFACTORING_*.md        ← Guides on the 2024 refactoring
 ├── requirements.txt        ← Dependencies
 └── pyproject.toml          ← Project config
 ```
 
-### Reading the Main File: `server.py`
+### Reading the Main File: `server.py` (Now Much Cleaner!)
 
-The main file is organized like this:
+The refactored server.py is only **199 lines** and is organized like this:
 
 ```python
 # ═══════════════════════════════════════════
@@ -512,100 +549,198 @@ from utils.rate_limit import initialize_rate_limiter
 # ... more imports
 
 # ═══════════════════════════════════════════
-# SECTION 2: INITIALIZATION
+# SECTION 2: SETUP (Logging, Rate Limiting, etc.)
 # ═══════════════════════════════════════════
 app = FastMCP(name="usaspending-server")
 rate_limiter = initialize_rate_limiter(60)  # 60 req/min
 http_client = httpx.AsyncClient(timeout=30.0)
 
 # ═══════════════════════════════════════════
-# SECTION 3: HELPER FUNCTIONS
+# SECTION 3: REGISTER ALL TOOL MODULES
 # ═══════════════════════════════════════════
-def format_currency(value):
-    """Convert 500000000 to $500M"""
-    # ... code
+from usaspending_mcp.tools import register_all_tools
+
+register_all_tools(
+    app, http_client, rate_limiter, BASE_URL, logger,
+    AWARD_TYPE_MAP, TOPTIER_AGENCY_MAP, SUBTIER_AGENCY_MAP
+)
+# Now all 27 tools from 6 modules are registered!
 
 # ═══════════════════════════════════════════
-# SECTION 4: TOOL DEFINITIONS (31 tools)
+# SECTION 4: SERVER STARTUP/SHUTDOWN
 # ═══════════════════════════════════════════
-@app.tool(name="search_federal_awards")
-async def search_federal_awards(query: str, max_results: int = 10):
-    # ... tool code
-
-# ═══════════════════════════════════════════
-# SECTION 5: STARTUP & SHUTDOWN
-# ═══════════════════════════════════════════
-async def startup():
-    # ... setup code
+async def run_stdio():
+    await app.run_stdio_async()
 
 def run_server():
-    # ... start HTTP server
+    uvicorn.run(app.http_app(), host="127.0.0.1", port=3002)
+
+if __name__ == "__main__":
+    # ... decide between HTTP or stdio mode
 ```
 
-### Anatomy of a Tool
+**Much simpler!** All the tool logic is now in focused modules.
 
-Here's what a tool looks like:
+### Reading Tool Modules (e.g., `tools/awards.py`)
+
+Here's how each tool module is structured:
 
 ```python
-@app.tool(
-    name="search_federal_awards",
-    description="Search for federal awards by keyword, agency, recipient, etc."
-)
-async def search_federal_awards(
-    query: str,                    # What to search for
-    max_results: int = 10,         # How many results to return
-    agency_name: str = None,       # Optional: filter by agency
-) -> TextContent:
+"""
+Award search and details tools.
+...
+"""
+
+def register_tools(
+    app, http_client, rate_limiter, base_url, logger_instance,
+    award_type_map, toptier_agency_map, subtier_agency_map
+) -> None:
     """
-    This is the function that runs when someone calls this tool.
+    Register all award tools.
 
-    Args:
-        query: The search term (e.g., "space contracts")
-        max_results: Number of results (default 10)
-        agency_name: Filter by specific agency (optional)
-
-    Returns:
-        TextContent: Formatted text response for the user
+    These parameters are available to all nested tool functions
+    through CLOSURES (explained below).
     """
 
-    # Step 1: Check rate limit
-    await rate_limiter.wait_if_needed("default")
+    @app.tool(name="get_award_by_id")
+    async def get_award_by_id(award_id: str) -> TextContent:
+        # Can use: http_client, rate_limiter, base_url, etc.
+        await rate_limiter.wait_if_needed()
+        # ... rest of tool code
 
-    # Step 2: Validate inputs
-    if not query or len(query.strip()) == 0:
-        return TextContent(type="text", text="Error: Query cannot be empty")
-
-    # Step 3: Build API request
-    params = {
-        "filters": {"keywords": [query]},
-        "limit": min(max_results, 100)  # Cap at 100
-    }
-
-    # Step 4: Make API call with retry
-    try:
-        response = await make_api_request(
-            "awards/search/",
-            params
-        )
-    except Exception as e:
-        return TextContent(type="text", text=f"Error: {str(e)}")
-
-    # Step 5: Format results
-    output = f"# Federal Awards - {query}\n\n"
-
-    results = response.json().get("results", [])
-    for award in results[:max_results]:
-        output += f"**{award['recipient']['name']}**\n"
-        output += f"- Award ID: {award['id']}\n"
-        output += f"- Amount: {format_currency(award['amount'])}\n"
-        output += f"- Link: {generate_award_url(award['id'])}\n\n"
-
-    # Step 6: Log the search
-    logger.info(f"Tool: search_federal_awards | Query: {query} | Results: {len(results)}")
-
-    # Step 7: Return response
-    return [TextContent(type="text", text=output)]
+    @app.tool(name="search_federal_awards")
+    async def search_federal_awards(query: str, max_results: int = 5):
+        # Can also use http_client, rate_limiter, etc.
+        parser = QueryParser(query, award_type_map, toptier_agency_map, subtier_agency_map)
+        # ... rest of tool code
 ```
+
+**Key pattern:** Each tool module has ONE `register_tools()` function that:
+1. Receives all shared dependencies as parameters
+2. Defines all tools for that category
+3. Each tool can access the parameters via Python **closures**
+
+### Anatomy of a Tool (Modular Architecture)
+
+In the refactored architecture, tools live in module files like `tools/awards.py`. Here's how they're structured:
+
+**File: `tools/awards.py`**
+
+```python
+"""
+Award search and details tools.
+
+This module contains 6 award-related tools that help find and analyze
+federal award contracts, grants, and other spending.
+"""
+
+def register_tools(
+    app,                      # FastMCP app (pass-through parameter)
+    http_client,              # Async HTTP client for API calls
+    rate_limiter,             # Rate limiter to respect API limits
+    base_url,                 # Base URL for USASpending.gov API
+    logger_instance,          # Logger for recording events
+    award_type_map,           # Mapping of award types (contract, grant, etc.)
+    toptier_agency_map,       # Mapping of agency names for normalization
+    subtier_agency_map        # Mapping of sub-agency names
+) -> None:
+    """
+    Register all award tools with FastMCP.
+
+    The key pattern here: ALL nested tool functions can ACCESS these parameters
+    through CLOSURES (explained below). They don't need to be passed explicitly.
+    """
+
+    @app.tool(
+        name="search_federal_awards",
+        description="Search for federal awards by keyword, agency, recipient, etc."
+    )
+    async def search_federal_awards(
+        query: str,
+        max_results: int = 10,
+        agency_name: str = None,
+    ) -> TextContent:
+        """
+        Search for federal awards.
+
+        This function can use http_client, rate_limiter, logger_instance, etc.
+        without them being passed in - they're captured via closure!
+        """
+
+        # Step 1: Check rate limit
+        await rate_limiter.wait_if_needed("default")
+
+        # Step 2: Validate inputs
+        if not query or len(query.strip()) == 0:
+            return [TextContent(type="text", text="Error: Query cannot be empty")]
+
+        # Step 3: Build API request
+        params = {
+            "filters": {"keywords": [query]},
+            "limit": min(max_results, 100)
+        }
+
+        # Step 4: Make API call
+        try:
+            response = await http_client.get(
+                f"{base_url}/awards/search/",
+                params=params
+            )
+            response.raise_for_status()
+        except Exception as e:
+            logger_instance.error(f"API call failed: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+        # Step 5: Format results
+        output = f"# Federal Awards - {query}\n\n"
+        results = response.json().get("results", [])
+
+        for award in results[:max_results]:
+            output += f"**{award['recipient']['name']}**\n"
+            output += f"- Award ID: {award['id']}\n"
+            output += f"- Amount: ${award['amount']:,.0f}\n\n"
+
+        # Step 6: Log the search
+        logger_instance.info(f"Tool: search_federal_awards | Query: {query}")
+
+        # Step 7: Return response
+        return [TextContent(type="text", text=output)]
+
+    # Other tool definitions follow the same pattern...
+```
+
+**Key Pattern Explanation: Closures**
+
+The magic is in how the tool function accesses parameters like `http_client` and `rate_limiter`. Here's the flow:
+
+```
+┌─────────────────────────────────────┐
+│ server.py                           │
+│  awards.register_tools(             │
+│    app, http_client,                │
+│    rate_limiter, ...                │
+│  )                                  │
+└──────────────┬──────────────────────┘
+               │ (parameters passed)
+               ▼
+┌──────────────────────────────────┐
+│ register_tools() function        │
+│  - Receives all parameters       │
+│  - Defines nested tools          │
+└──────────────────────────────────┘
+               │
+               ▼
+      ┌────────────────┐
+      │ Tool function  │
+      │ Can ACCESS:    │
+      │ - http_client  │← Captured from outer scope
+      │ - rate_limiter │← Captured from outer scope
+      │ - logger       │← Captured from outer scope
+      │ (via closure!) │
+      └────────────────┘
+```
+
+This is called a **closure** - a nested function that remembers variables from its outer scope.
 
 ### Key Python Concepts Used
 
@@ -657,9 +792,135 @@ for award in response.json()["results"]:
 results = [a for a in response.json()["results"] if a["amount"] > 1000000]
 ```
 
+#### 6. **Closures** (Nested functions remembering outer scope) ⭐ IMPORTANT FOR MODULAR ARCHITECTURE
+```python
+def register_tools(app, http_client, rate_limiter):
+    """Outer function - receives dependencies"""
+
+    @app.tool(name="search_federal_awards")
+    async def search_federal_awards(query: str):
+        """Inner function - can use http_client and rate_limiter!"""
+        await rate_limiter.wait_if_needed()  # Accessing rate_limiter from outer scope
+        response = await http_client.get(url)  # Accessing http_client from outer scope
+        return response.json()
+
+# The inner function "closes over" (remembers) the parameters from the outer function
+# This is how tool functions access shared dependencies without passing them explicitly!
+```
+
+**Why Closures Matter in This Project:**
+- Tool functions need access to `http_client`, `rate_limiter`, `logger`, etc.
+- Instead of passing them to every tool function, we pass them to `register_tools()`
+- All nested tool functions automatically have access to them via closure
+- This keeps the tool function signatures clean: `search_federal_awards(query: str)` instead of `search_federal_awards(query, http_client, rate_limiter, logger, ...)`
+
 ---
 
 ## Advanced Concepts
+
+### Dependency Injection via Closures (How Modular Architecture Works)
+
+**The Problem:**
+All tools need access to the same objects (http_client, rate_limiter, logger), but we don't want to pass them to every tool function.
+
+**The Solution:**
+Use closures to "inject" dependencies automatically.
+
+**Step-by-Step Flow:**
+
+```
+Step 1: server.py creates shared objects
+┌─────────────────────────────────┐
+│ server.py                       │
+│ app = FastMCP()                 │
+│ http_client = AsyncClient()     │
+│ rate_limiter = RateLimiter()    │
+│ logger = get_logger()           │
+└────────┬────────────────────────┘
+         │
+Step 2: Pass them to register_all_tools
+         │
+         ▼
+┌────────────────────────────────────────────┐
+│ register_all_tools(app, http_client, ...) │
+│  │                                         │
+│  ├─→ awards.register_tools(...)           │
+│  │   └─→ All 6 award tools get access     │
+│  │       to http_client, etc via closure  │
+│  │                                        │
+│  ├─→ spending.register_tools(...)         │
+│  │   └─→ All 8 spending tools get access  │
+│  │       to http_client, etc via closure  │
+│  │                                        │
+│  └─→ classifications.register_tools(...) │
+│      └─→ All 5 classification tools ...   │
+└────────────────────────────────────────────┘
+
+Step 3: Tools in each module access dependencies via closure
+         ▼
+     ┌─────────────────┐
+     │ Tool Function   │
+     │ async def       │
+     │ search_awards() │
+     │ {               │
+     │ Can use:        │
+     │ http_client ←──┘ (from outer scope)
+     │ rate_limiter←─┘ (from outer scope)
+     │ logger ←──────┘ (from outer scope)
+     │ }               │
+     └─────────────────┘
+```
+
+**Code Example:**
+
+```python
+# tools/awards.py
+def register_tools(app, http_client, rate_limiter, logger):
+    # These parameters are "captured" by closures below
+
+    @app.tool(name="get_award_by_id")
+    async def get_award_by_id(award_id: str):
+        # This function remembers http_client and rate_limiter
+        # even though they're not passed in!
+        await rate_limiter.wait_if_needed()
+
+        response = await http_client.get(
+            f"https://api.usaspending.gov/api/v2/awards/{award_id}/"
+        )
+
+        return [TextContent(...)]
+
+    @app.tool(name="search_federal_awards")
+    async def search_federal_awards(query: str, max_results: int = 10):
+        # This function ALSO remembers http_client and rate_limiter
+        await rate_limiter.wait_if_needed()
+
+        response = await http_client.get(...)
+
+        return [TextContent(...)]
+```
+
+**Why This Pattern is Powerful:**
+
+1. **Cleaner tool signatures** - No need to pass dependencies to every tool
+2. **Centralized initialization** - All shared objects created once in server.py
+3. **Consistency** - All tools use same http_client and rate_limiter
+4. **Testability** - Can mock dependencies easily by passing test versions to register_tools()
+5. **Maintainability** - Change a dependency once in server.py affects all tools
+
+**Alternative (NOT Used Here):**
+```python
+# This would be messier:
+@app.tool(name="search_federal_awards")
+async def search_federal_awards(
+    query: str,
+    max_results: int = 10,
+    http_client=None,      # ← Ugly!
+    rate_limiter=None,     # ← Ugly!
+    logger=None            # ← Ugly!
+):
+    # Tool signature is cluttered
+```
 
 ### Rate Limiting Deep Dive
 
@@ -779,93 +1040,229 @@ Tool execution
 
 ---
 
-## The 31 Tools Explained
+## The 27 Tools Explained (Organized by Module)
 
-### Federal Spending Tools (22 tools)
+The refactored system organizes 27 tools across 6 focused modules. Each module file contains related tools that work together.
 
-These are grouped by what they help you analyze:
+### Module 1: `tools/awards.py` (Award Discovery - 6 tools)
 
-#### Award Discovery (5 tools)
-- Find specific awards
-- Look up recipients
-- Get details about contracts
+**Purpose:** Find and analyze federal award contracts, grants, loans, and insurance
 
-#### Spending Analysis (7 tools)
-- Understand spending patterns
-- See trends over time
-- Compare different areas
+1. **search_federal_awards** - Search by keyword, agency, recipient
+2. **get_award_by_id** - Retrieve specific award details
+3. **get_award_details** - Get comprehensive award information
+4. **get_recipient_details** - Look up award history for a recipient
+5. **get_vendor_by_uei** - Search vendors by Unique Entity ID
+6. **get_subaward_data** - Get subaward and subcontract information
 
-#### Classification Analysis (4 tools)
-- Analyze by industry type (NAICS)
-- Analyze by product/service type (PSC)
-- Analyze by budget category (Object Class)
-- Analyze by function (Budget Functions)
+**Example Questions These Answer:**
+- "Find all NASA contracts in Texas"
+- "What contracts did Acme Corp receive?"
+- "Get details on award #12345"
 
-#### Specialized Tools (4 tools)
-- Small business analysis
-- Subaward/subcontract tracking
-- Disaster funding tracking
-- Data export
+### Module 2: `tools/spending.py` (Spending Analysis - 8 tools)
 
-#### Information Tools (2 tools)
-- Get agency profiles
-- Get vendor profiles
-- Get field documentation
+**Purpose:** Analyze spending patterns, trends, and comparisons
 
-### FAR Regulation Tools (5 tools)
+1. **analyze_federal_spending** - Get spending overview by agency/type
+2. **get_spending_trends** - See historical spending trends
+3. **get_spending_by_state** - Break down spending geographically
+4. **compare_states** - Compare spending metrics across states
+5. **emergency_spending_tracker** - Track emergency and disaster funding
+6. **spending_efficiency_metrics** - Calculate efficiency ratios
+7. **get_disaster_funding** - Get disaster relief funding data
+8. **get_budget_functions** - Get spending by budget function codes
 
-These search federal acquisition rules:
+**Example Questions These Answer:**
+- "How much did the government spend on space in 2023?"
+- "Which states got the most defense spending?"
+- "Show me emergency spending trends"
 
-1. **search_far_regulations** - Search across all 4 parts
-2. **get_far_section** - Look up specific section
-3. **get_far_topic_sections** - Find by topic
-4. **get_far_analytics_report** - See usage patterns
-5. **check_far_compliance** - Check if something follows rules
+### Module 3: `tools/classifications.py` (Classification Analysis - 5 tools)
 
-### Conversation Management Tools (4 tools)
+**Purpose:** Analyze spending by industry, product type, and budget category
 
-These tools track and analyze interaction history and user behavior:
+1. **get_top_naics_breakdown** - Top NAICS (industry) classifications by spending
+2. **get_naics_psc_info** - Information about NAICS and PSC codes
+3. **get_naics_trends** - Industry trends and year-over-year growth
+4. **get_object_class_analysis** - Spending by budget categories
+5. **get_field_documentation** - Documentation for USASpending API fields
+
+**Example Questions These Answer:**
+- "What industries got the most federal contracts?"
+- "Show IT services spending trends"
+- "Which object classes had the biggest budget?"
+
+### Module 4: `tools/profiles.py` (Profile Tools - 4 tools)
+
+**Purpose:** Get detailed profiles of agencies and vendors
+
+1. **get_agency_profile** - Comprehensive profile for a federal agency
+2. **get_vendor_profile** - Detailed profile for a vendor/contractor
+3. **get_top_vendors_by_contract_count** - Top vendors by number of contracts (not dollars)
+4. **analyze_small_business** - Small business set-asides and spending
+
+**Example Questions These Answer:**
+- "Show me DoD's spending profile"
+- "What's the profile for Lockheed Martin?"
+- "Which small businesses got the most contracts?"
+
+### Module 5: `tools/conversations.py` (Conversation Management - 4 tools)
+
+**Purpose:** Track and analyze conversation history and user behavior
 
 1. **get_conversation** - Retrieve complete conversation history by ID
 2. **list_conversations** - List all conversations for a user with pagination
-3. **get_conversation_summary** - Get statistics and summary information for a specific conversation
-4. **get_tool_usage_stats** - Get tool usage patterns and statistics across all conversations
+3. **get_conversation_summary** - Get statistics and summary for a conversation
+4. **get_tool_usage_stats** - Get tool usage patterns and statistics
 
-**Why these matter:**
+**Example Questions These Answer:**
+- "Show me all tools I've used today"
+- "Which tools are most popular?"
+- "Show statistics for conversation #123"
+
+**Why Conversation Tools Matter:**
 - Understand how users interact with the system
-- Track which tools are most popular
+- Track which tools are most valuable
 - Analyze conversation patterns and trends
 - Support user analytics and system improvement
+
+### Module 6: `tools/far.py` (FAR Regulations - 5 tools)
+
+**Purpose:** Search and analyze Federal Acquisition Regulation requirements
+
+1. **search_far_regulations** - Keyword search across FAR Parts 14, 15, 16, 19
+2. **get_far_section** - Direct lookup by section number
+3. **get_far_topic_sections** - Find sections by topic
+4. **get_far_analytics_report** - Generate analytics on FAR section usage
+5. **check_far_compliance** - Check FAR compliance requirements
+
+**Example Questions These Answer:**
+- "What's FAR 15.403-1?"
+- "Show me rules about small business set-asides"
+- "Is this acquisition compliant with FAR?"
+
+### Summary: 27 Tools Across 6 Modules
+
+```
+tools/awards.py           → 6 tools  → 1,296 lines
+tools/spending.py         → 8 tools  → 1,165 lines
+tools/classifications.py  → 5 tools  → 1,385 lines
+tools/profiles.py         → 4 tools  →   673 lines
+tools/conversations.py    → 4 tools  →   337 lines
+tools/far.py              → 5 tools  → (in main server)
+                          ──────────
+Total                     27 tools
+```
 
 ---
 
 ## Common Development Tasks
 
-### Task 1: Adding a New Tool
+### Task 1: Adding a New Tool (Modular Approach)
 
-To add a new tool, you add it to `server.py`:
+**Step 1: Decide which module the tool belongs to**
+
+- Award-related? → Add to `tools/awards.py`
+- Spending analysis? → Add to `tools/spending.py`
+- Classification/NAICS/PSC? → Add to `tools/classifications.py`
+- Vendor/agency profile? → Add to `tools/profiles.py`
+- FAR regulation? → Add to `tools/far.py`
+- New category? → Create `tools/new_category.py`
+
+**Step 2: Add the tool inside the register_tools() function**
+
+Example: Adding a new spending tool to `tools/spending.py`
 
 ```python
-@app.tool(
-    name="my_new_tool",
-    description="What this tool does"
-)
-async def my_new_tool(param1: str) -> TextContent:
-    # Step 1: Rate limit
-    await rate_limiter.wait_if_needed("default")
+def register_tools(
+    app, http_client, rate_limiter, base_url, logger_instance,
+    award_type_map, toptier_agency_map, subtier_agency_map
+) -> None:
+    """Register all spending analysis tools"""
 
-    # Step 2: Call API
-    response = await make_api_request("endpoint/", params)
+    # Existing tools here...
 
-    # Step 3: Format results
-    output = "Formatted response"
+    # NEW TOOL: Add your new tool here
+    @app.tool(
+        name="analyze_inflation_adjusted_spending",
+        description="Analyze federal spending adjusted for inflation"
+    )
+    async def analyze_inflation_adjusted_spending(
+        agency_name: str,
+        start_year: int = 2000,
+        end_year: int = 2024
+    ) -> TextContent:
+        """
+        Analyze spending trends adjusted for inflation.
 
-    # Step 4: Log
-    logger.info(f"my_new_tool called with {param1}")
+        The rate_limiter, http_client, and logger_instance parameters
+        are available via closure from the outer register_tools() scope.
+        """
 
-    # Step 5: Return
-    return [TextContent(type="text", text=output)]
+        # Step 1: Rate limit
+        await rate_limiter.wait_if_needed("default")
+
+        # Step 2: Validate inputs
+        if not agency_name or not agency_name.strip():
+            return [TextContent(type="text", text="Error: agency_name required")]
+
+        # Step 3: Build API request
+        params = {
+            "filters": {"agency_name": agency_name},
+            "group_by": "fiscal_year"
+        }
+
+        # Step 4: Make API call
+        try:
+            response = await http_client.get(
+                f"{base_url}/spending/spending_over_time/",
+                params=params
+            )
+            response.raise_for_status()
+        except Exception as e:
+            logger_instance.error(f"API error: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+        # Step 5: Parse response
+        data = response.json()
+        results = data.get("results", [])
+
+        # Step 6: Format output
+        output = f"# Inflation-Adjusted Spending: {agency_name}\n\n"
+        for item in results:
+            output += f"**{item['fiscal_year']}**: ${item['amount']:,.0f}\n"
+
+        # Step 7: Log the tool execution
+        logger_instance.info(
+            f"Tool: analyze_inflation_adjusted_spending | "
+            f"Agency: {agency_name} | Years: {start_year}-{end_year}"
+        )
+
+        # Step 8: Return response
+        return [TextContent(type="text", text=output)]
 ```
+
+**Step 3: No changes needed to server.py!**
+
+The `register_all_tools()` function in `tools/__init__.py` already calls `spending.register_tools()`, so your new tool is automatically registered.
+
+**Step 4: Test the tool**
+
+```bash
+# Restart the server
+./start_mcp_server.sh
+
+# Or use the test client
+PYTHONPATH=src ./.venv/bin/python -m usaspending_mcp.client
+# Your new tool should appear in the menu!
+```
+
+**Key Points About Modular Tool Addition:**
+- No need to touch `server.py` - it stays clean!
+- Tool is automatically available once defined in register_tools()
+- Can use http_client, rate_limiter, logger via closure
+- All tools in the same module can share helper functions defined above them
 
 ### Task 2: Running Tests
 

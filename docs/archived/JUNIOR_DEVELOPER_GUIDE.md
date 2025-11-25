@@ -20,7 +20,7 @@ A comprehensive guide to understanding, extending, and maintaining this FastMCP-
 
 ## Architecture Overview
 
-### System Architecture Diagram
+### System Architecture Diagram (Refactored 2024)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -40,32 +40,51 @@ A comprehensive guide to understanding, extending, and maintaining this FastMCP-
             │  Protocol Handling)   │
             └───────────┬───────────┘
                         │
-        ┌───────────────┴────────────────┐
-        │                                │
-    ┌───▼──────────┐            ┌───────▼────┐
-    │ Tool Layer   │            │ Util Layer │
-    │              │            │            │
-    │ 22 Spending  │            │ Rate Limit │
-    │ Tools        │            │ Retry      │
-    │ 5 FAR Tools  │            │ Logging    │
-    │ 4 Convo      │            │ Analytics  │
-    │ Tools        │            │            │
-    └───┬──────────┘            └───────┬────┘
-        │                               │
-        └───────────────┬───────────────┘
-                        │
-            ┌───────────▼────────────────┐
-            │   Rate Limiter Check       │
-            │ (Token Bucket Algorithm)   │
-            └───────────┬────────────────┘
-                        │
-            ┌───────────▼────────────────┐
-            │   Retry Logic              │
-            │ (Exponential Backoff)      │
-            └───────────┬────────────────┘
+            ┌───────────▼─────────────────────────────┐
+            │   Tool Registration Coordinator         │
+            │   (tools/__init__.py:register_all_tools)│
+            └─┬──────────────────────────────────────┘
+              │
+    ┌─────────┼─────────┬──────────┬────────────┬──────────┐
+    │         │         │          │            │          │
+    ▼         ▼         ▼          ▼            ▼          ▼
+┌────────┐ ┌──────┐ ┌─────────┐ ┌────────┐ ┌──────────┐ ┌────────┐
+│Awards  │ │Spend │ │Class-   │ │Profile │ │Convo     │ │FAR     │
+│Module  │ │Module│ │ify      │ │Module  │ │Mgmt      │ │Module  │
+│        │ │      │ │Module   │ │        │ │Module    │ │        │
+│6 tools │ │8     │ │5 tools  │ │4 tools │ │4 tools   │ │5 tools │
+│        │ │tools │ │         │ │        │ │          │ │        │
+└────────┘ └──────┘ └─────────┘ └────────┘ └──────────┘ └────────┘
+    │         │         │          │            │          │
+    └─────────┼─────────┴──────────┴────────────┴──────────┘
+              │
+        ┌─────▼─────────────────────┐
+        │   Shared Utilities Layer  │
+        │ - helpers.py              │
+        │ - rate_limit.py           │
+        │ - retry.py                │
+        │ - logging.py              │
+        │ - conversation_logging.py │
+        │ - query_context.py        │
+        │ - result_aggregation.py   │
+        │ - relevance_scoring.py    │
+        └─────┬─────────────────────┘
+              │
+    ┌─────────┴─────────┬──────────────┐
+    │                   │              │
+    ▼                   ▼              ▼
+┌─────────────┐  ┌──────────────┐  ┌─────────┐
+│ Rate        │  │ Retry Logic  │  │ Logging │
+│ Limiter     │  │ (tenacity)   │  │         │
+│ (Token      │  │ Exponential  │  │ JSON or │
+│ Bucket)     │  │ Backoff      │  │ Text    │
+└─────┬───────┘  └──────┬───────┘  └────┬────┘
+      │                 │               │
+      └─────────────────┼───────────────┘
                         │
             ┌───────────▼────────────────┐
             │   HTTP Client (httpx)      │
+            │   (30 second timeout)      │
             └───────────┬────────────────┘
                         │
             ┌───────────▼────────────────┐
@@ -117,7 +136,7 @@ A comprehensive guide to understanding, extending, and maintaining this FastMCP-
 
 ## Project Structure & Rationale
 
-### Directory Structure with Explanations
+### Directory Structure with Explanations (After 2024 Refactoring)
 
 ```
 usaspending-mcp/
@@ -125,12 +144,18 @@ usaspending-mcp/
 ├── src/usaspending_mcp/              # Main package
 │   ├── __main__.py                   # Entry point: routes to run_server or run_stdio
 │   ├── __init__.py                   # Package exports
-│   ├── server.py                     # Core server: 31 tools + FastMCP setup (~2000 lines)
+│   ├── server.py                     # Core server: FastMCP setup (~199 lines - now VERY clean!)
 │   ├── client.py                     # Test client for stdio mode development
 │   │
-│   ├── tools/                        # Tool registration modules
-│   │   ├── __init__.py
-│   │   └── far.py                    # FAR tool definitions (5 tools)
+│   ├── tools/                        # Modular tool registration modules (NEW STRUCTURE!)
+│   │   ├── __init__.py               # register_all_tools() - coordinates all modules
+│   │   ├── helpers.py                # Shared utilities (QueryParser, formatters)
+│   │   ├── awards.py                 # Award discovery tools (1,296 lines, 6 tools)
+│   │   ├── spending.py               # Spending analysis tools (1,165 lines, 8 tools)
+│   │   ├── classifications.py        # NAICS/PSC analysis (1,385 lines, 5 tools)
+│   │   ├── profiles.py               # Vendor/agency profiles (673 lines, 4 tools)
+│   │   ├── conversations.py          # Conversation management (337 lines, 4 tools)
+│   │   └── far.py                    # FAR regulation tools (5 tools)
 │   │
 │   ├── loaders/                      # Data loaders for initialization
 │   │   ├── __init__.py
@@ -138,17 +163,22 @@ usaspending-mcp/
 │   │
 │   └── utils/                        # Reusable utilities
 │       ├── __init__.py
+│       ├── constants.py              # Centralized constants and mappings
 │       ├── rate_limit.py             # Token bucket rate limiter
 │       ├── retry.py                  # Exponential backoff retry logic
 │       ├── logging.py                # Structured logging setup
+│       ├── conversation_logging.py   # Conversation tracking and analytics
 │       ├── search_analytics.py       # Track search patterns
+│       ├── query_context.py          # Query refinement and context analysis
+│       ├── result_aggregation.py     # Result grouping and summaries
+│       ├── relevance_scoring.py      # Intelligent result ranking
 │       └── far.py                    # FAR database query engine
 │
 ├── docs/                             # Documentation
-│   ├── data/
-│   │   └── far/                      # FAR regulation JSON files (Parts 14, 15, 16, 19)
+│   ├── data/far/                     # FAR regulation JSON files (Parts 14, 15, 16, 19)
 │   ├── guides/                       # User and developer guides
-│   └── dev/                          # Development documentation
+│   ├── dev/                          # Development documentation
+│   └── archived/                     # Archived guides (HIGH_SCHOOL_GUIDE, JUNIOR_DEVELOPER_GUIDE)
 │
 ├── tests/                            # Test suite
 │   ├── conftest.py                   # Pytest fixtures and configuration
@@ -162,139 +192,317 @@ usaspending-mcp/
 ├── pytest.ini                        # Pytest configuration
 ├── start_mcp_server.sh               # Startup script for HTTP mode
 ├── server_manager.py                 # Manage running server instances
+├── REFACTORING_GUIDE.md              # Professional refactoring documentation
+├── REFACTORING_SUMMARY.md            # Overview of refactoring work
+├── REFACTORING_INDEX.md              # Navigation for refactoring docs
 └── README.md                         # Project overview
 ```
 
-### Why This Structure?
+### Why This Structure? (Refactoring Improvements)
 
 1. **`src/` layout** - Following Python best practices for package distribution
-2. **Separated `tools/` and `utils/`** - Clear distinction between business logic and infrastructure
-3. **`loaders/` directory** - Explicit data initialization phase
-4. **`tests/` mirror** - Test structure mirrors source structure
-5. **`docs/data/`** - Offline data that doesn't need API calls
-6. **Dual scripts** - `start_mcp_server.sh` and `server_manager.py` for operations
+2. **Modular `tools/` directory** - Each tool module is focused and single-purpose:
+   - `awards.py` - All award discovery tools
+   - `spending.py` - All spending analysis tools
+   - `classifications.py` - All NAICS/PSC analysis tools
+   - `profiles.py` - All vendor/agency profile tools
+   - `conversations.py` - All conversation management tools
+   - `far.py` - All FAR regulation tools
+3. **`helpers.py` in tools/** - Shared utilities used across multiple tool modules
+4. **Clean `server.py`** - Now only 199 lines (was 4,515!), contains only initialization
+5. **`loaders/` directory** - Explicit data initialization phase
+6. **`tests/` mirror** - Test structure mirrors source structure
+7. **`docs/data/`** - Offline data that doesn't need API calls
+8. **Dual scripts** - `start_mcp_server.sh` and `server_manager.py` for operations
+9. **Refactoring documentation** - REFACTORING_*.md files document the transformation
+
+### Key Architectural Change: Modular Tool Registration
+
+**Before (Monolithic):**
+```
+server.py (4,515 lines)
+├── All 28 tool definitions in one file
+├── Difficult to navigate
+├── Hard to test individual tools
+└── High cognitive load
+```
+
+**After (Modular):**
+```
+server.py (199 lines) → lightweight initialization
+└── register_all_tools() in tools/__init__.py
+    ├── awards.register_tools()  → 6 award tools
+    ├── spending.register_tools() → 8 spending tools
+    ├── classifications.register_tools() → 5 classification tools
+    ├── profiles.register_tools() → 4 profile tools
+    ├── conversations.register_tools() → 4 conversation tools
+    └── far.register_tools() → 5 FAR tools
+
+Benefits:
+✓ Easier to find tools (by category/module)
+✓ Easier to add new tools (know which module to edit)
+✓ Easier to test (mock dependencies per module)
+✓ Better code organization
+✓ Reduced file size for any single file
+```
 
 ---
 
 ## Core Components Deep Dive
 
-### 1. FastMCP Application (`server.py`)
+### 1. FastMCP Application (`server.py`) - Now Lightweight!
 
-This is the largest file (~2000 lines) and contains the FastMCP app initialization and all tool definitions.
+**Old:** ~2000 lines with all tool definitions
+**New:** ~199 lines with only initialization
 
-#### Structure of `server.py`
+#### Structure of New `server.py` (After Refactoring)
 
 ```python
-# SECTION 1: Imports
-from fastmcp import FastMCP
-from mcp.types import TextContent
+# ═══════════════════════════════════════════════════════════════
+# SECTION 1: IMPORTS
+# ═══════════════════════════════════════════════════════════════
+import asyncio
 import httpx
-from utils.rate_limit import initialize_rate_limiter
-from utils.logging import setup_structured_logging
-# ... more imports
+import uvicorn
+from fastmcp import FastMCP
+from usaspending_mcp.utils.logging import setup_structured_logging, get_logger
+from usaspending_mcp.utils.rate_limit import initialize_rate_limiter
 
-# SECTION 2: Global instances
+# ═══════════════════════════════════════════════════════════════
+# SECTION 2: SETUP (Logging, Rate Limiting, HTTP Client)
+# ═══════════════════════════════════════════════════════════════
+is_stdio_mode = len(sys.argv) > 1 and sys.argv[1] == "--stdio"
+setup_structured_logging(log_level="INFO", json_output=not is_stdio_mode)
+logger = get_logger("server")
 app = FastMCP(name="usaspending-server")
-rate_limiter = None  # Initialized in startup
-http_client = None   # Initialized in startup
-logger = None        # Initialized in startup
+BASE_URL = "https://api.usaspending.gov/api/v2"
 
-# SECTION 3: Startup/Shutdown hooks
-@app.on_startup
-async def startup():
-    global rate_limiter, http_client, logger
-    # Initialize everything here
-    pass
+rate_limiter = initialize_rate_limiter(requests_per_minute=60)
+http_client = httpx.AsyncClient(timeout=30.0)
 
-@app.on_shutdown
-async def shutdown():
-    # Cleanup here
-    pass
+# Agency mappings (award types, agency names, etc.)
+AWARD_TYPE_MAP = { ... }
+TOPTIER_AGENCY_MAP = { ... }
+SUBTIER_AGENCY_MAP = { ... }
 
-# SECTION 4: Helper functions
-async def make_api_request(endpoint: str, params: dict) -> httpx.Response:
-    """Wrapper for API calls that applies rate limiting"""
-    await rate_limiter.wait_if_needed("default")
-    url = f"https://api.usaspending.gov/api/v2/{endpoint}"
-    return await http_client.get(url, params=params)
+# ═══════════════════════════════════════════════════════════════
+# SECTION 3: REGISTER ALL TOOL MODULES
+# ═══════════════════════════════════════════════════════════════
+from usaspending_mcp.tools import register_all_tools
 
-def format_currency(value: float) -> str:
-    """Convert 500000000 to $500M"""
-    pass
+logger.info("Registering all MCP tools...")
+register_all_tools(
+    app, http_client, rate_limiter, BASE_URL, logger,
+    AWARD_TYPE_MAP, TOPTIER_AGENCY_MAP, SUBTIER_AGENCY_MAP
+)
+logger.info("✅ All tools registered! (27 total tools)")
 
-# SECTION 5: Tool definitions (31 tools: 22 spending, 5 FAR, 4 conversation)
-@app.tool(name="search_federal_awards", ...)
-async def search_federal_awards(...) -> TextContent:
-    pass
-
-# ... more tools ...
-
-# SECTION 6: Run functions
+# ═══════════════════════════════════════════════════════════════
+# SECTION 4: SERVER STARTUP/SHUTDOWN
+# ═══════════════════════════════════════════════════════════════
 async def run_stdio():
     """Run in stdio mode for testing"""
-    pass
+    await app.run_stdio_async()
 
 def run_server():
-    """Run HTTP server"""
-    pass
+    """Run HTTP server on port 3002"""
+    uvicorn.run(app.http_app(), host="127.0.0.1", port=3002)
+
+if __name__ == "__main__":
+    if is_stdio_mode:
+        asyncio.run(run_stdio())
+    else:
+        run_server()
 ```
 
-#### Important Pattern: Tool Anatomy
+**Key Differences from Old Version:**
 
-Every tool follows this pattern:
+| Aspect | Old (Monolithic) | New (Modular) |
+|--------|------------------|---------------|
+| **File size** | ~2000 lines | ~199 lines |
+| **Tool definitions** | In server.py | In tools/*.py modules |
+| **How to add tool** | Edit server.py | Edit appropriate tools/*.py |
+| **Namespace** | Single giant file | 6 focused modules |
+| **Navigation** | Search through 2000 lines | Go to specific tools/*.py |
+| **Testing** | Mock entire server | Mock per module |
+
+#### New: Tool Module Registration (`tools/__init__.py`)
+
+All tool registration is now coordinated in this file:
 
 ```python
-@app.tool(
-    name="tool_name",
-    description="What this tool does and what parameters it accepts"
-)
-async def tool_name(
-    param1: str,           # Required parameter
-    param2: int = 10,      # Optional parameter with default
-    param3: str = None     # Optional parameter (nullable)
-) -> TextContent:
-    """
-    Extended description of what this tool does.
+def register_all_tools(
+    app, http_client, rate_limiter, base_url, logger_instance,
+    award_type_map, toptier_agency_map, subtier_agency_map
+) -> None:
+    """Register all MCP tools from all modules"""
 
-    This docstring helps users understand:
-    - What the tool does
-    - What each parameter means
-    - What kind of output to expect
-    """
+    from usaspending_mcp.tools import (
+        awards, spending, classifications, profiles,
+        conversations, far
+    )
 
-    # Step 1: Rate limit
-    await rate_limiter.wait_if_needed("default")
+    # Register awards tools (6 tools)
+    awards.register_tools(
+        app, http_client, rate_limiter, base_url, logger_instance,
+        award_type_map, toptier_agency_map, subtier_agency_map
+    )
 
-    # Step 2: Validate inputs
-    if not param1 or len(param1.strip()) == 0:
-        return [TextContent(type="text", text="Error: param1 cannot be empty")]
+    # Register spending tools (8 tools)
+    spending.register_tools(
+        app, http_client, rate_limiter, base_url, logger_instance,
+        award_type_map, toptier_agency_map, subtier_agency_map
+    )
 
-    # Step 3: Build request
-    params = {
-        "filters": {"keywords": [param1]},
-        "limit": min(param2, 100)  # Cap at 100
-    }
+    # ... similar for classifications, profiles, conversations ...
 
-    # Step 4: Make API call
-    try:
-        response = await make_api_request("awards/search/", params)
-    except Exception as e:
-        logger.error(f"API call failed: {str(e)}")
-        return [TextContent(type="text", text=f"Error: {str(e)}")]
+    # Register FAR tools (5 tools)
+    far.register_far_tools(app)
 
-    # Step 5: Parse and format
-    data = response.json()
-    output = f"# Results for {param1}\n\n"
-
-    for item in data.get("results", [])[:param2]:
-        output += f"- {item['name']}\n"
-
-    # Step 6: Log
-    logger.info(f"Tool executed: {tool_name}, Results: {len(data.get('results', []))}")
-
-    # Step 7: Return
-    return [TextContent(type="text", text=output)]
+    logger_instance.info("✅ All 27 tools registered successfully!")
 ```
+
+**Key Pattern: Each module has a `register_tools()` function**
+
+Every tool module (awards.py, spending.py, etc.) exports a `register_tools()` function that:
+1. Receives shared dependencies (http_client, rate_limiter, logger)
+2. Defines all tools for that module
+3. Uses closures to give tools access to dependencies
+4. Is called from register_all_tools() in __init__.py
+
+#### Important Pattern: Tool Anatomy in Modular Architecture
+
+Every tool module (`tools/awards.py`, `tools/spending.py`, etc.) has this structure:
+
+```python
+"""
+Award search and details tools.
+
+This module defines 6 tools for finding and analyzing federal awards.
+"""
+
+def register_tools(
+    app,                      # FastMCP app instance
+    http_client,              # Async HTTP client
+    rate_limiter,             # Rate limiter for API calls
+    base_url,                 # Base URL for API
+    logger_instance,          # Logger for recording events
+    award_type_map,           # Award type mappings
+    toptier_agency_map,       # Agency name mappings
+    subtier_agency_map        # Sub-agency mappings
+) -> None:
+    """
+    Register all award tools.
+
+    Key Pattern: The parameters passed here are captured by closure
+    in all the nested tool functions below. They don't need to be
+    passed to each tool function individually!
+    """
+
+    # ═══════════════════════════════════════════
+    # TOOL 1: search_federal_awards
+    # ═══════════════════════════════════════════
+    @app.tool(
+        name="search_federal_awards",
+        description="Search federal awards by keyword, agency, recipient"
+    )
+    async def search_federal_awards(
+        query: str,                # What to search for
+        max_results: int = 10,     # Max results to return
+        agency_name: str = None    # Optional agency filter
+    ) -> TextContent:
+        """
+        Search for federal awards.
+
+        Args:
+            query: Search term (e.g., "space contracts")
+            max_results: Number of results (default 10)
+            agency_name: Optional agency to filter by
+
+        Note: This function accesses http_client, rate_limiter,
+        and logger_instance via closure (see outer function scope).
+        """
+
+        # Step 1: Rate limit
+        await rate_limiter.wait_if_needed("default")
+
+        # Step 2: Validate inputs
+        if not query or len(query.strip()) == 0:
+            return [TextContent(type="text", text="Error: query required")]
+
+        # Step 3: Build request
+        params = {
+            "filters": {"keywords": [query]},
+            "limit": min(max_results, 100)
+        }
+
+        # Step 4: Make API call
+        try:
+            response = await http_client.get(
+                f"{base_url}/awards/search/",  # Note: using base_url from outer scope
+                params=params
+            )
+            response.raise_for_status()
+        except Exception as e:
+            logger_instance.error(f"API error: {e}")  # Note: using logger_instance from outer scope
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+        # Step 5: Parse and format
+        data = response.json()
+        output = f"# Results for {query}\n\n"
+
+        for item in data.get("results", [])[:max_results]:
+            output += f"- {item.get('recipient', {}).get('name')}\n"
+            output += f"  Amount: ${item.get('amount', 0):,.0f}\n\n"
+
+        # Step 6: Log
+        logger_instance.info(f"Tool: search_federal_awards | Query: {query}")
+
+        # Step 7: Return
+        return [TextContent(type="text", text=output)]
+
+    # ═══════════════════════════════════════════
+    # TOOL 2: get_award_by_id
+    # (Similar structure, also uses closure pattern)
+    # ═══════════════════════════════════════════
+    @app.tool(name="get_award_by_id", ...)
+    async def get_award_by_id(award_id: str) -> TextContent:
+        # Can also use http_client, rate_limiter, logger_instance here
+        pass
+
+    # ... more tools follow ...
+```
+
+**Key Closure Pattern Explained:**
+
+```
+Parameters passed to register_tools()
+                │
+                ▼
+┌─────────────────────────────────────────┐
+│ def register_tools(                     │
+│     app,                                │
+│     http_client,         ◄── Captured  │
+│     rate_limiter,        ◄── Captured  │
+│     logger_instance      ◄── Captured  │
+│ ):                                      │
+│                                         │
+│   @app.tool(...)                        │
+│   async def tool_function(...):         │
+│       await rate_limiter.wait_if_needed()  ◄── Accesses from closure!
+│       response = await http_client.get(...)  ◄── Accesses from closure!
+│       logger_instance.info(...)        ◄── Accesses from closure!
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Benefits of This Pattern:**
+
+1. **Clean tool signatures** - Only parameters from user (query, amount, etc.)
+2. **No global variables** - Dependencies passed explicitly to register_tools()
+3. **Easy to test** - Can pass mock http_client, rate_limiter, logger
+4. **Consistent** - All tools in a module use same dependencies
+5. **Maintainable** - Change a dependency once in server.py affects all tools
 
 #### Error Handling Pattern
 
@@ -836,27 +1044,38 @@ topics = far_db.get_by_topic("competition")
 
 ## Adding New Features
 
-### Adding a New Tool (Step-by-Step)
+### Adding a New Tool (Step-by-Step) - Modular Approach
 
-#### Step 1: Understand the Pattern
+#### Step 1: Choose the Right Module
 
-Look at an existing tool to understand the structure:
+Decide which module the tool belongs to:
+
+- **Award-related** → `tools/awards.py`
+- **Spending analysis** → `tools/spending.py`
+- **Classification/NAICS/PSC** → `tools/classifications.py`
+- **Vendor/agency profile** → `tools/profiles.py`
+- **FAR regulation** → `tools/far.py`
+- **New category** → Create `tools/new_category.py`
+
+#### Step 2: Open the Right Module
+
+Open the module file (e.g., `src/usaspending_mcp/tools/spending.py`):
 
 ```python
-@app.tool(
-    name="search_federal_awards",
-    description="Search for federal awards..."
-)
-async def search_federal_awards(
-    query: str,
-    max_results: int = 10
-) -> TextContent:
-    # ... implementation
+def register_tools(
+    app, http_client, rate_limiter, base_url, logger_instance,
+    award_type_map, toptier_agency_map, subtier_agency_map
+) -> None:
+    """Register all spending analysis tools"""
+
+    # Existing tools here...
+
+    # NEW TOOL GOES HERE
 ```
 
-#### Step 2: Choose the Right Endpoint
+#### Step 3: Choose the Right API Endpoint
 
-Check USASpending.gov API v2 documentation to find the right endpoint:
+Check USASpending.gov API v2 documentation for the endpoint:
 
 ```
 GET /api/v2/awards/search/           → Search awards
@@ -864,75 +1083,91 @@ GET /api/v2/awards/{id}/             → Get award details
 GET /api/v2/agencies/                → List agencies
 GET /api/v2/agencies/{id}/spending    → Agency spending data
 GET /api/v2/idvs/                     → IDV (contract vehicle) search
+GET /api/v2/spending/spending_over_time/ → Spending trends
 ```
 
-#### Step 3: Write the Tool
+#### Step 4: Write the New Tool
+
+Example: Adding new tool to `tools/spending.py`
 
 ```python
-@app.tool(
-    name="get_idv_details",
-    description="Get details about an Indefinite Delivery Vehicle (IDV) contract"
-)
-async def get_idv_details(idv_id: str) -> TextContent:
-    """
-    Retrieve comprehensive details about an IDV contract.
+def register_tools(app, http_client, rate_limiter, base_url, logger_instance,
+                   award_type_map, toptier_agency_map, subtier_agency_map):
+    """Register all spending analysis tools"""
 
-    Args:
-        idv_id: The ID of the IDV to retrieve
+    # Existing tools...
 
-    Returns:
-        Formatted IDV details or error message
-    """
+    # NEW TOOL: Indefinite Delivery Vehicle (IDV) Analysis
+    @app.tool(
+        name="get_idv_details",
+        description="Get detailed information about an Indefinite Delivery Vehicle contract"
+    )
+    async def get_idv_details(idv_id: str) -> TextContent:
+        """
+        Retrieve comprehensive details about an IDV contract.
 
-    # Step 1: Validate input
-    if not idv_id or not idv_id.strip():
-        return [TextContent(type="text", text="Error: IDV ID cannot be empty")]
+        Args:
+            idv_id: The ID of the IDV to retrieve
 
-    # Step 2: Rate limit
-    await rate_limiter.wait_if_needed("default")
+        Returns:
+            Formatted IDV details or error message
 
-    # Step 3: Build request
-    params = {}  # IDV endpoints typically use path parameter
+        Note: http_client, rate_limiter, and logger_instance are
+        available via closure from the outer register_tools() scope.
+        """
 
-    # Step 4: Make API call with retry
-    try:
-        response = await make_api_request(f"idvs/{idv_id}/", params)
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return [TextContent(type="text", text=f"Error: IDV {idv_id} not found")]
-        logger.error(f"API error: {e}")
-        return [TextContent(type="text", text="Error: Failed to retrieve IDV details")]
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        return [TextContent(type="text", text="Error: An unexpected error occurred")]
+        # Step 1: Validate input
+        if not idv_id or not idv_id.strip():
+            return [TextContent(type="text", text="Error: IDV ID required")]
 
-    # Step 5: Parse response
-    data = response.json()
+        # Step 2: Rate limit
+        await rate_limiter.wait_if_needed("default")
 
-    # Step 6: Format output
-    output = f"""# IDV Details: {data.get('award_id', 'Unknown')}
+        # Step 3: Build request
+        params = {}  # IDV endpoint uses path parameter
+
+        # Step 4: Make API call
+        try:
+            response = await http_client.get(
+                f"{base_url}/idvs/{idv_id}/",  # Using base_url from closure
+                params=params
+            )
+            response.raise_for_status()
+        except Exception as e:
+            logger_instance.error(f"IDV details error: {e}")  # Using logger_instance from closure
+            if "404" in str(e):
+                return [TextContent(type="text", text=f"Error: IDV {idv_id} not found")]
+            return [TextContent(type="text", text="Error: Failed to retrieve IDV details")]
+
+        # Step 5: Parse response
+        data = response.json()
+
+        # Step 6: Format output
+        total_value = data.get('total_obligation', 0)
+        output = f"""# IDV Details: {data.get('award_id', 'Unknown')}
 
 **Vehicle Type:** {data.get('type_of_idc', 'Unknown')}
 **Agency:** {data.get('awarding_agency', {}).get('name', 'Unknown')}
-**Total Value:** {format_currency(data.get('total_obligation', 0))}
+**Total Value:** ${total_value:,.0f}
 **Start Date:** {data.get('date_signed', 'Unknown')}
 **Number of Orders:** {data.get('count_of_orders', 0)}
-
-**Ordering Information:**
-- Minimum:** {format_currency(data.get('minimum_value', 0))}
-- Maximum:** {format_currency(data.get('maximum_value', 0))}
 
 **Details:**
 {data.get('description', 'No description available')}
 """
 
-    # Step 7: Log
-    logger.info(f"Tool executed: get_idv_details, IDV: {idv_id}")
+        # Step 7: Log
+        logger_instance.info(f"Tool: get_idv_details | IDV: {idv_id}")
 
-    # Step 8: Return
-    return [TextContent(type="text", text=output)]
+        # Step 8: Return
+        return [TextContent(type="text", text=output)]
 ```
+
+**Key Points:**
+- The tool is defined INSIDE `register_tools()`
+- It automatically accesses `http_client`, `rate_limiter`, `logger_instance` via closure
+- No need to modify server.py or __init__.py!
+- Tool is auto-registered by the existing registration flow
 
 #### Step 4: Add Tests
 
