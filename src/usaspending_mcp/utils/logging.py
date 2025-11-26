@@ -133,9 +133,9 @@ def setup_structured_logging(
     log_path = Path(log_file)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # All logs file handler with rotation (10 MB per file, keep 5 backups)
+    # All logs file handler with rotation (10 MB per file, keep 10 backups)
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file, maxBytes=10 * 1024 * 1024, backupCount=5  # 10 MB
+        log_file, maxBytes=10 * 1024 * 1024, backupCount=10  # 10 MB
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
@@ -143,9 +143,9 @@ def setup_structured_logging(
     # Error log file handler (only ERROR and CRITICAL)
     error_log_file = str(log_path.parent / "usaspending_mcp_errors.log")
     error_handler = logging.handlers.RotatingFileHandler(
-        error_log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5 MB
+        error_log_file, maxBytes=5 * 1024 * 1024, backupCount=10  # 5 MB
     )
-    error_handler.setLevel(logging.ERROR)
+    error_handler.setLevel(logging.DEBUG)
     error_handler.setFormatter(file_formatter)
     root_logger.addHandler(error_handler)
 
@@ -154,14 +154,14 @@ def setup_structured_logging(
     search_handler = logging.handlers.RotatingFileHandler(
         search_log_file,
         maxBytes=20 * 1024 * 1024,  # 20 MB (larger since we'll log more here)
-        backupCount=5,
+        backupCount=10,
     )
-    search_handler.setLevel(logging.INFO)
+    search_handler.setLevel(logging.DEBUG)
     search_handler.setFormatter(file_formatter)
     # Only add search logs from the search logger
     search_logger = logging.getLogger("usaspending_mcp.searches")
     search_logger.addHandler(search_handler)
-    search_logger.setLevel(logging.INFO)
+    search_logger.setLevel(logging.DEBUG)
     # Prevent propagation to root logger to avoid duplication
     search_logger.propagate = False
 

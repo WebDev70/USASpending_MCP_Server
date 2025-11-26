@@ -1,7 +1,7 @@
 """
 FAR (Federal Acquisition Regulation) Data Loader
 
-Loads FAR parts 14, 15, 16, and 19 from JSON files stored in the docs directory.
+Loads FAR parts 14, 15, 16, and 19 from JSON files.
 Uses LRU caching for efficient memory management.
 """
 
@@ -9,6 +9,8 @@ import json
 import logging
 import os
 from functools import lru_cache
+
+from usaspending_mcp.config import ServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +28,8 @@ def load_far_all_parts() -> dict:
     parts = [14, 15, 16, 19]
     for part_num in parts:
         try:
-            # Get the path relative to this file, then up to docs directory
-            current_dir = os.path.dirname(__file__)
-            project_root = os.path.dirname(os.path.dirname(current_dir))
-            far_file = os.path.join(project_root, "docs", "data", "far", f"far_part{part_num}.json")
+            # Use configured FAR data path
+            far_file = os.path.join(ServerConfig.FAR_DATA_PATH, f"far_part{part_num}.json")
 
             with open(far_file, "r") as f:
                 part_data = json.load(f)

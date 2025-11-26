@@ -97,10 +97,18 @@ usaspending-mcp/
 │   ├── tools/                     # MCP tool modules
 │   │   ├── __init__.py
 │   │   └── far.py                 # FAR (Part 14, 15, 16, 19) tools
-│   └── loaders/                   # Data loading utilities
+│   ├── loaders/                   # Data loading utilities
+│   │   ├── __init__.py
+│   │   └── far.py                 # FAR data loaders
+│   └── data/                      # Runtime data files
 │       ├── __init__.py
-│       └── far.py                 # FAR data loaders
-├── docs/                          # Documentation & data
+│       └── far/                   # FAR regulatory data (Parts 14, 15, 16, 19)
+│           ├── __init__.py
+│           ├── far_part14.json
+│           ├── far_part15.json
+│           ├── far_part16.json
+│           └── far_part19.json
+├── docs/                          # Documentation
 │   ├── guides/                    # User guides & tutorials
 │   │   ├── QUICKSTART.md
 │   │   ├── STRUCTURED_LOGGING_GUIDE.md
@@ -110,12 +118,6 @@ usaspending-mcp/
 │   │   ├── MCP_BEST_PRACTICES_REVIEW.md
 │   │   ├── MULTI_TOOL_ANALYTICS_ARCHITECTURE.md
 │   │   └── FUTURE_RECOMMENDATIONS.md
-│   ├── data/                      # Data files used by the application
-│   │   └── far/                   # FAR regulatory data (Parts 14, 15, 16, 19)
-│   │       ├── far_part14.json
-│   │       ├── far_part15.json
-│   │       ├── far_part16.json
-│   │       └── far_part19.json
 │   ├── reference/                 # Reference documentation (not loaded by code)
 │   │   ├── api-mappings.json
 │   │   ├── query-templates.json

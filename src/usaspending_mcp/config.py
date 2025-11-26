@@ -51,7 +51,7 @@ class ServerConfig:
     # WARNING: Something unexpected happened
     # ERROR: Something went wrong
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = os.getenv(
-        "LOG_LEVEL", "INFO"
+        "LOG_LEVEL", "DEBUG"
     )
 
     # ============ API SETTINGS ============
@@ -81,7 +81,7 @@ class ServerConfig:
 
     # The folder path where FAR JSON files are stored
     # FAR data is loaded once when the server starts
-    FAR_DATA_PATH: str = os.getenv("FAR_DATA_PATH", "docs/data/far")
+    FAR_DATA_PATH: str = os.getenv("FAR_DATA_PATH", "src/usaspending_mcp/data/far")
 
     @classmethod
     def validate_required(cls) -> None:

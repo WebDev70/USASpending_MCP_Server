@@ -137,15 +137,17 @@ Results: 10
 │   ├── tools/
 │   │   ├── __init__.py
 │   │   └── far.py                     ← FAR tools (Parts 14, 15, 16, 19)
-│   └── loaders/
-│       ├── __init__.py
-│       └── far.py                     ← FAR data loading utilities
+│   ├── loaders/
+│   │   ├── __init__.py
+│   │   └── far.py                     ← FAR data loading utilities
+│   └── data/
+│       └── far/
+│           └── far_part*.json         ← FAR regulatory data (Parts 14, 15, 16, 19)
 ├── docs/
 │   ├── QUICKSTART.md                  ← This file
 │   ├── INSTRUCTIONS.md                ← User guide
 │   ├── TROUBLESHOOTING_GUIDE.md
 │   ├── QUERY_PATTERNS_COOKBOOK.md
-│   ├── far_part*.json                 ← FAR regulatory data
 │   ├── api/
 │   │   ├── MCP_API_REFERENCE.md       ← Tools reference
 │   │   ├── USASPENDING_API_V2_SEARCH_ENDPOINTS.md

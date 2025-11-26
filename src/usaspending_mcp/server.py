@@ -11,7 +11,7 @@ REFACTORING NOTE:
 This file has been refactored to use a modular tool architecture.
 All 28 MCP tools are now organized into focused modules:
 - tools/spending.py: 8 spending analysis tools
-- tools/classifications.py: 5 classification tools  
+- tools/classifications.py: 5 classification tools
 - tools/profiles.py: 4 profile tools
 - tools/conversations.py: 4 conversation tools
 - tools/awards.py: 6 award discovery tools (TODO: extract remaining)

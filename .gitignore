@@ -63,6 +63,6 @@ logs/
 Thumbs.db
 *.tmp
 
-# Project-specific - Keep analysis scripts separate if needed
-query_*.py
-test_*.py
+# Project-specific - Ad-hoc analysis/test scripts in root directory only
+/query_*.py
+/test_*.py

@@ -1,0 +1,354 @@
+src/usaspending_mcp/server.py:14:51: W291 trailing whitespace
+src/usaspending_mcp/server.py:61:1: E402 module level import not at top of file
+src/usaspending_mcp/server.py:129:1: E402 module level import not at top of file
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.awards' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.spending' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.classifications' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.profiles' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.conversations' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.far' imported but unused
+src/usaspending_mcp/tools/__init__.py:47:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'awards' from line 47
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'spending' from line 47
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'classifications' from line 47
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'profiles' from line 47
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'conversations' from line 47
+src/usaspending_mcp/tools/__init__.py:97:5: F811 redefinition of unused 'far' from line 47
+src/usaspending_mcp/tools/__init__.py:97:101: E501 line too long (118 > 100 characters)
+src/usaspending_mcp/tools/awards.py:202:101: E501 line too long (153 > 100 characters)
+src/usaspending_mcp/tools/awards.py:211:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:213:101: E501 line too long (132 > 100 characters)
+src/usaspending_mcp/tools/awards.py:262:101: E501 line too long (114 > 100 characters)
+src/usaspending_mcp/tools/awards.py:278:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/awards.py:306:101: E501 line too long (214 > 100 characters)
+src/usaspending_mcp/tools/awards.py:318:46: F821 undefined name 'get_date_range'
+src/usaspending_mcp/tools/awards.py:347:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:349:101: E501 line too long (111 > 100 characters)
+src/usaspending_mcp/tools/awards.py:396:101: E501 line too long (137 > 100 characters)
+src/usaspending_mcp/tools/awards.py:398:101: E501 line too long (113 > 100 characters)
+src/usaspending_mcp/tools/awards.py:399:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/awards.py:404:80: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:405:100: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:405:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/awards.py:406:101: E501 line too long (120 > 100 characters)
+src/usaspending_mcp/tools/awards.py:406:108: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:452:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:520:86: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:538:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:636:92: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:636:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/awards.py:639:101: E501 line too long (152 > 100 characters)
+src/usaspending_mcp/tools/awards.py:657:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:747:39: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:749:44: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:751:40: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:751:91: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:751:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/awards.py:772:42: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:774:47: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:776:101: E501 line too long (116 > 100 characters)
+src/usaspending_mcp/tools/awards.py:791:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/awards.py:795:42: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:797:47: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:816:44: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:816:89: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/awards.py:818:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/awards.py:832:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:839:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/awards.py:839:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/awards.py:906:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/awards.py:906:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/awards.py:970:101: E501 line too long (115 > 100 characters)
+src/usaspending_mcp/tools/awards.py:978:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/awards.py:983:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/awards.py:1008:5: E304 blank lines found after function decorator
+src/usaspending_mcp/tools/awards.py:1025:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1035:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1051:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1110:101: E501 line too long (119 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1111:101: E501 line too long (114 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1115:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1142:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1149:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1153:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1225:31: F821 undefined name 'relevance_scorer'
+src/usaspending_mcp/tools/awards.py:1238:26: F821 undefined name 'result_aggregator'
+src/usaspending_mcp/tools/awards.py:1253:40: F821 undefined name 'conversation_logger'
+src/usaspending_mcp/tools/awards.py:1257:27: F821 undefined name 'query_context_analyzer'
+src/usaspending_mcp/tools/awards.py:1257:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/awards.py:1258:30: F821 undefined name 'query_context_analyzer'
+src/usaspending_mcp/tools/awards.py:1267:39: F821 undefined name 'result_aggregator'
+src/usaspending_mcp/tools/awards.py:1295:5: E303 too many blank lines (4)
+src/usaspending_mcp/tools/classifications.py:34:1: F401 'datetime.datetime' imported but unused
+src/usaspending_mcp/tools/classifications.py:41:1: F401 'usaspending_mcp.utils.logging.log_tool_execution' imported but unused
+src/usaspending_mcp/tools/classifications.py:86:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:148:21: F841 local variable 'keyword' is assigned to but never used
+src/usaspending_mcp/tools/classifications.py:196:51: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/classifications.py:198:56: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/classifications.py:216:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/classifications.py:220:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:318:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/classifications.py:359:101: E501 line too long (152 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:380:13: F811 redefinition of unused 'datetime' from line 34
+src/usaspending_mcp/tools/classifications.py:402:38: F821 undefined name 'TOPTIER_AGENCY_MAP'
+src/usaspending_mcp/tools/classifications.py:416:101: E501 line too long (109 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:450:101: E501 line too long (111 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:483:101: E501 line too long (133 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:500:101: E501 line too long (127 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:508:101: E501 line too long (121 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:519:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:522:32: F821 undefined name 'get_default_date_range'
+src/usaspending_mcp/tools/classifications.py:533:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:543:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:589:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:601:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:605:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:618:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:687:74: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/classifications.py:687:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:724:101: E501 line too long (130 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:736:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:743:9: F821 undefined name 'log_search'
+src/usaspending_mcp/tools/classifications.py:758:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:764:36: F821 undefined name 'get_default_date_range'
+src/usaspending_mcp/tools/classifications.py:775:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:785:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:801:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:860:101: E501 line too long (119 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:861:101: E501 line too long (114 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:865:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:892:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:899:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:903:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:975:31: F821 undefined name 'relevance_scorer'
+src/usaspending_mcp/tools/classifications.py:988:26: F821 undefined name 'result_aggregator'
+src/usaspending_mcp/tools/classifications.py:1003:40: F821 undefined name 'conversation_logger'
+src/usaspending_mcp/tools/classifications.py:1007:27: F821 undefined name 'query_context_analyzer'
+src/usaspending_mcp/tools/classifications.py:1007:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1008:30: F821 undefined name 'query_context_analyzer'
+src/usaspending_mcp/tools/classifications.py:1017:39: F821 undefined name 'result_aggregator'
+src/usaspending_mcp/tools/classifications.py:1027:9: F821 undefined name 'log_search'
+src/usaspending_mcp/tools/classifications.py:1043:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:1043:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1087:29: F821 undefined name 'generate_award_url'
+src/usaspending_mcp/tools/classifications.py:1091:33: F821 undefined name 'generate_recipient_url'
+src/usaspending_mcp/tools/classifications.py:1095:30: F821 undefined name 'generate_agency_url'
+src/usaspending_mcp/tools/classifications.py:1109:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:1109:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1111:18: F821 undefined name 'StringIO'
+src/usaspending_mcp/tools/classifications.py:1112:18: F821 undefined name 'csv'
+src/usaspending_mcp/tools/classifications.py:1148:25: F821 undefined name 'generate_award_url'
+src/usaspending_mcp/tools/classifications.py:1149:29: F821 undefined name 'generate_recipient_url'
+src/usaspending_mcp/tools/classifications.py:1150:26: F821 undefined name 'generate_agency_url'
+src/usaspending_mcp/tools/classifications.py:1173:101: E501 line too long (115 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1181:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:1187:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/classifications.py:1252:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:1258:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/classifications.py:1262:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1295:28: F821 undefined name 'fetch_field_dictionary'
+src/usaspending_mcp/tools/classifications.py:1331:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1366:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/classifications.py:1379:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/classifications.py:1384:5: E303 too many blank lines (4)
+src/usaspending_mcp/tools/conversations.py:31:1: F401 'typing.Optional' imported but unused
+src/usaspending_mcp/tools/conversations.py:38:1: F401 'usaspending_mcp.utils.logging.log_tool_execution' imported but unused
+src/usaspending_mcp/tools/conversations.py:94:101: E501 line too long (106 > 100 characters)
+src/usaspending_mcp/tools/conversations.py:97:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/conversations.py:103:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/conversations.py:116:36: F821 undefined name 'json'
+src/usaspending_mcp/tools/conversations.py:126:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/conversations.py:169:30: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/conversations.py:169:52: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/conversations.py:175:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/conversations.py:206:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/conversations.py:231:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/conversations.py:279:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/conversations.py:283:13: F821 undefined name 'uvicorn'
+src/usaspending_mcp/tools/conversations.py:292:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/conversations.py:307:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/conversations.py:324:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/conversations.py:330:13: F821 undefined name 'asyncio'
+src/usaspending_mcp/tools/conversations.py:336:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/far.py:10:1: F401 'logging' imported but unused
+src/usaspending_mcp/tools/far.py:11:1: F401 're' imported but unused
+src/usaspending_mcp/tools/far.py:17:1: F401 'usaspending_mcp.utils.search_analytics.initialize_analytics' imported but unused
+src/usaspending_mcp/tools/far.py:265:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/far.py:268:101: E501 line too long (129 > 100 characters)
+src/usaspending_mcp/tools/far.py:268:108: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/far.py:272:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/far.py:279:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/far.py:286:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/far.py:289:101: E501 line too long (113 > 100 characters)
+src/usaspending_mcp/tools/far.py:290:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/far.py:301:101: E501 line too long (140 > 100 characters)
+src/usaspending_mcp/tools/far.py:301:103: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/far.py:387:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/far.py:392:27: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/helpers.py:406:26: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/helpers.py:409:26: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/helpers.py:412:26: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:107:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:131:101: E501 line too long (131 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:141:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:159:51: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:161:56: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:164:71: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:177:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/profiles.py:183:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/profiles.py:256:74: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:257:60: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:258:72: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:258:77: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:258:89: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:258:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:273:47: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:273:91: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:273:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:291:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/profiles.py:321:101: E501 line too long (104 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:322:101: E501 line too long (126 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:336:101: E501 line too long (175 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:345:36: F821 undefined name 'get_default_date_range'
+src/usaspending_mcp/tools/profiles.py:366:30: F821 undefined name 'TOPTIER_AGENCY_MAP'
+src/usaspending_mcp/tools/profiles.py:387:101: E501 line too long (105 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:390:101: E501 line too long (125 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:435:101: E501 line too long (141 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:444:101: E501 line too long (139 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:447:23: F541 f-string is missing placeholders
+src/usaspending_mcp/tools/profiles.py:453:64: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:453:76: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:453:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:454:78: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:454:93: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/profiles.py:454:101: E501 line too long (115 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:465:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/profiles.py:486:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:497:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:499:101: E501 line too long (124 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:511:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:513:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:563:30: F821 undefined name 'TOPTIER_AGENCY_MAP'
+src/usaspending_mcp/tools/profiles.py:623:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:628:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:657:101: E501 line too long (114 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:658:101: E501 line too long (114 > 100 characters)
+src/usaspending_mcp/tools/profiles.py:672:5: E303 too many blank lines (4)
+src/usaspending_mcp/tools/spending.py:5:101: E501 line too long (106 > 100 characters)
+src/usaspending_mcp/tools/spending.py:37:1: F401 'csv' imported but unused
+src/usaspending_mcp/tools/spending.py:38:1: F401 'io.StringIO' imported but unused
+src/usaspending_mcp/tools/spending.py:46:1: F401 'usaspending_mcp.tools.helpers.generate_award_url' imported but unused
+src/usaspending_mcp/tools/spending.py:46:1: F401 'usaspending_mcp.tools.helpers.generate_recipient_url' imported but unused
+src/usaspending_mcp/tools/spending.py:46:1: F401 'usaspending_mcp.tools.helpers.generate_agency_url' imported but unused
+src/usaspending_mcp/tools/spending.py:94:101: E501 line too long (106 > 100 characters)
+src/usaspending_mcp/tools/spending.py:164:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:188:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:201:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/spending.py:221:60: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:222:59: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:222:65: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:232:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:239:46: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:239:88: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:252:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:310:101: E501 line too long (119 > 100 characters)
+src/usaspending_mcp/tools/spending.py:325:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:333:46: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:333:88: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:358:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:406:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/spending.py:412:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:422:46: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:422:88: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:423:42: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:423:80: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:444:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:522:84: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:524:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:527:47: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:527:91: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:527:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:540:47: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:540:91: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:540:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:562:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:606:101: E501 line too long (119 > 100 characters)
+src/usaspending_mcp/tools/spending.py:632:56: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:633:61: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:634:85: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:634:89: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:634:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:635:62: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:636:63: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:671:79: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:673:76: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:673:101: E501 line too long (113 > 100 characters)
+src/usaspending_mcp/tools/spending.py:686:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/spending.py:693:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/spending.py:742:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:821:63: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:829:89: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:829:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:848:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:887:17: F601 dictionary key '4000' repeated with different values
+src/usaspending_mcp/tools/spending.py:896:17: F601 dictionary key '4000' repeated with different values
+src/usaspending_mcp/tools/spending.py:918:5: E303 too many blank lines (3)
+src/usaspending_mcp/tools/spending.py:925:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/spending.py:939:101: E501 line too long (108 > 100 characters)
+src/usaspending_mcp/tools/spending.py:949:101: E501 line too long (112 > 100 characters)
+src/usaspending_mcp/tools/spending.py:995:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1007:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1011:101: E501 line too long (101 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1024:5: E303 too many blank lines (2)
+src/usaspending_mcp/tools/spending.py:1093:74: E226 missing whitespace around arithmetic operator
+src/usaspending_mcp/tools/spending.py:1093:101: E501 line too long (102 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1130:101: E501 line too long (130 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1142:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/tools/spending.py:1164:5: E303 too many blank lines (2)
+src/usaspending_mcp/utils/conversation_logging.py:34:101: E501 line too long (103 > 100 characters)
+src/usaspending_mcp/utils/far.py:9:1: F401 'os' imported but unused
+src/usaspending_mcp/utils/far.py:10:1: F401 're' imported but unused
+src/usaspending_mcp/utils/far.py:11:1: F401 'functools.lru_cache' imported but unused
+src/usaspending_mcp/utils/far.py:13:1: F401 'typing.Tuple' imported but unused
+src/usaspending_mcp/utils/far.py:314:5: F824 `global _far_db` is unused: name is never assigned in scope
+src/usaspending_mcp/utils/logging.py:8:1: F401 'json' imported but unused
+src/usaspending_mcp/utils/query_context.py:8:1: F401 'typing.Set' imported but unused
+src/usaspending_mcp/utils/query_context.py:169:101: E501 line too long (111 > 100 characters)
+src/usaspending_mcp/utils/query_context.py:197:24: F541 f-string is missing placeholders
+src/usaspending_mcp/utils/result_aggregation.py:9:1: F401 'typing.Optional' imported but unused
+src/usaspending_mcp/utils/result_aggregation.py:9:1: F401 'typing.Tuple' imported but unused
+src/usaspending_mcp/utils/result_aggregation.py:248:101: E501 line too long (105 > 100 characters)
+src/usaspending_mcp/utils/result_aggregation.py:265:101: E501 line too long (116 > 100 characters)
+src/usaspending_mcp/utils/retry.py:53:1: F401 'typing.Callable' imported but unused
+src/usaspending_mcp/utils/retry.py:56:1: F401 'tenacity.retry_if_exception_type' imported but unused
+src/usaspending_mcp/utils/search_analytics.py:274:5: F824 `global _analytics_instances` is unused: name is never assigned in scope
+src/usaspending_mcp/utils/search_analytics.py:291:5: F824 `global _analytics_instances` is unused: name is never assigned in scope
+tests/conftest.py:8:1: F401 'json' imported but unused
+tests/conftest.py:9:1: F401 'datetime.datetime' imported but unused
+tests/conftest.py:10:1: F401 'unittest.mock.patch' imported but unused
+tests/test_set_aside_implementation.py:11:1: F401 'json' imported but unused
+tests/test_set_aside_implementation.py:48:15: F541 f-string is missing placeholders
+tests/unit/test_conversation_logging.py:10:1: F401 'datetime.datetime' imported but unused
+tests/unit/test_conversation_logging.py:15:1: F401 'usaspending_mcp.utils.conversation_logging.log_conversation' imported but unused
+tests/unit/test_tools.py:8:1: F401 'asyncio' imported but unused
+tests/unit/test_tools.py:9:1: F401 'unittest.mock.AsyncMock' imported but unused
+tests/unit/test_tools.py:9:1: F401 'unittest.mock.MagicMock' imported but unused
+tests/unit/test_tools.py:9:1: F401 'unittest.mock.patch' imported but unused
+tests/unit/test_tools.py:34:9: F841 local variable 'mock_response' is assigned to but never used
+tests/unit/test_utils_logging.py:8:1: F401 'asyncio' imported but unused
+tests/unit/test_utils_logging.py:11:1: F401 'io.StringIO' imported but unused
+tests/unit/test_utils_logging.py:12:1: F401 'unittest.mock.AsyncMock' imported but unused
+tests/unit/test_utils_logging.py:12:1: F401 'unittest.mock.MagicMock' imported but unused
+tests/unit/test_utils_logging.py:12:1: F401 'unittest.mock.patch' imported but unused
+tests/unit/test_utils_logging.py:163:9: F841 local variable 'initial_count' is assigned to but never used
+tests/unit/test_utils_logging.py:300:13: F841 local variable 'result' is assigned to but never used
+tests/unit/test_utils_logging.py:320:13: F841 local variable 'result' is assigned to but never used
+tests/unit/test_utils_logging.py:330:17: F841 local variable 'result' is assigned to but never used
+tests/unit/test_utils_rate_limit.py:10:1: F401 'unittest.mock.MagicMock' imported but unused
+tests/unit/test_utils_rate_limit.py:10:1: F401 'unittest.mock.patch' imported but unused
+tests/unit/test_utils_retry.py:8:1: F401 'asyncio' imported but unused
+tests/unit/test_utils_retry.py:9:1: F401 'unittest.mock.patch' imported but unused
+tests/unit/test_utils_retry.py:13:1: F401 'tenacity.RetryError' imported but unused
+tests/unit/test_utils_retry.py:322:9: F841 local variable 'elapsed' is assigned to but never used
+tests/unit/test_utils_retry.py:356:13: F841 local variable 'delay1' is assigned to but never used
+tests/unit/test_utils_retry.py:357:13: F841 local variable 'delay2' is assigned to but never used

@@ -256,7 +256,7 @@ Located in `docs/reference/` - These are for reference and don't need sequential
 
 ### Active Data Files
 
-Located in `docs/data/far/`:
+Located in `src/usaspending_mcp/data/far/`:
 
 - **FAR regulatory files** - JSON files for Federal Acquisition Regulation Parts 14, 15, 16, and 19
 - Used by the application for FAR lookups and compliance checking

@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "last_updated": "2025-10-30",
+  "last_updated": "2025-11-25",
   "description": "Comprehensive catalog of MCP tools available in the USASpending server with FAR regulatory tools",
   "server_info": {
     "name": "USASpending MCP Server with Multi-Part FAR Tools",
     "version": "2.2.0",
     "base_url": "https://api.usaspending.gov/api/v2",
-    "total_tools": 25,
+    "total_tools": 32,
     "note": "FAR tools now support Parts 14, 15, 16, and 19 (updated from Part 15 only). Supports cross-part searches and lookups."
   },
   "tools": {

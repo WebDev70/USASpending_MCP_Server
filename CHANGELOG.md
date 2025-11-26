@@ -6,6 +6,98 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [2.2.0] - 2025-11-26
+
+### Changed
+
+#### Project Structure Improvements
+- **FAR Data Relocation**: Moved FAR JSON files from `docs/data/far/` to `src/usaspending_mcp/data/far/`
+  - Clear separation: `docs/` for documentation, `src/*/data/` for runtime data
+  - Follows Python packaging best practices
+  - Data ships with package automatically
+  - Benefits: Cleaner architecture, better organization
+
+#### Configuration Updates
+- Updated `src/usaspending_mcp/config.py`
+  - `FAR_DATA_PATH` default changed to `src/usaspending_mcp/data/far`
+  - Environment variable `FAR_DATA_PATH` still supported for customization
+- Updated `src/usaspending_mcp/loaders/far.py`
+  - Now uses `ServerConfig.FAR_DATA_PATH` instead of hard-coded path
+  - Added `ServerConfig` import
+  - Configurable via environment variables
+
+#### Testing Configuration
+- Updated `pytest.ini`
+  - Changed `log_file` from `test.log` to `logs/test.log`
+  - Centralized all pytest logs to `logs/` directory
+  - Consistent log location regardless of execution directory
+
+### Fixed
+
+#### .gitignore Improvements
+- Fixed overly broad ignore patterns
+  - Changed `query_*.py` → `/query_*.py` (root directory only)
+  - Changed `test_*.py` → `/test_*.py` (root directory only)
+  - Prevents accidentally ignoring test files in `tests/` directory
+  - Updated comment to clarify intent: "Ad-hoc analysis/test scripts in root directory only"
+
+#### Documentation Updates
+- Removed stale `GEMINI.md` reference from `CLAUDE.md`
+  - File doesn't exist, reference was outdated
+
+### Removed
+
+#### Cleanup
+- Deleted non-standard `coverage/` directory (2.3MB)
+  - Standard `htmlcov/` location will be used for future coverage reports
+  - Already properly ignored by `.gitignore`
+- Deleted duplicate `test.log` files
+  - Removed `./test.log` (root directory)
+  - Removed `./tests/scripts/test.log` (empty placeholder)
+  - Kept single source: `logs/test.log`
+
+### Added
+
+#### Documentation Maintenance Policy
+- Added comprehensive "Documentation Maintenance Policy" section to `CLAUDE.md`
+  - Defines when CLAUDE.md, CHANGELOG.md, and README.md must be updated
+  - Specifies update triggers (structure changes, config changes, new features, etc.)
+  - Provides update checklist for each file
+  - Includes semantic versioning guidelines
+  - Example workflow demonstrating the policy
+  - 81 lines of clear, actionable guidance for Claude Code
+
+### Documentation
+
+#### Updated Files (8 files)
+- `CLAUDE.md` - Updated FAR data paths, project structure, removed stale references, added Documentation Maintenance Policy (102 lines changed)
+- `README.md` - Updated project structure diagram with new data directory (20 lines changed)
+- `docs/DOCUMENTATION_ROADMAP.md` - Updated FAR data location reference
+- `docs/guides/QUICKSTART.md` - Updated project structure with new FAR data location
+- `docs/archived/HIGH_SCHOOL_GUIDE.md` - Updated 4 FAR data path references
+- `docs/archived/JUNIOR_DEVELOPER_GUIDE.md` - Updated FAR data loading example code
+- `docs/reference/tools-catalog.json` - Auto-updated version timestamp
+
+#### Created Files
+- `src/usaspending_mcp/data/__init__.py` - Package marker for data directory
+- `src/usaspending_mcp/data/far/__init__.py` - Package marker for FAR data directory
+
+### Technical Details
+
+**Files Modified**: 15 files
+**Files Deleted**: 6 files (4 old FAR JSONs + 2 duplicate logs)
+**Files Created**: 6 files (new data directory structure)
+**Net Change**: -839 lines (cleaner, more organized structure)
+
+**Verification**: All changes tested and verified operational
+- ✅ FAR data loads correctly from new location (210 sections across 4 parts)
+- ✅ Configuration properly uses `ServerConfig.FAR_DATA_PATH`
+- ✅ All documentation updated and consistent
+- ✅ Test files can be committed normally
+- ✅ Pytest logs centralized to `logs/test.log`
+
+---
+
 ## [2.1.0] - 2025-11-19
 
 ### Added

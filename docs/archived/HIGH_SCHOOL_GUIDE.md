@@ -307,10 +307,10 @@ async def get_award_details(award_id: str):
 **Process:**
 ```
 1. Application starts
-2. Load: docs/data/far/far_part14.json
-3. Load: docs/data/far/far_part15.json
-4. Load: docs/data/far/far_part16.json
-5. Load: docs/data/far/far_part19.json
+2. Load: src/usaspending_mcp/data/far/far_part14.json
+3. Load: src/usaspending_mcp/data/far/far_part15.json
+4. Load: src/usaspending_mcp/data/far/far_part16.json
+5. Load: src/usaspending_mcp/data/far/far_part19.json
 6. Store in memory (cached)
 7. Ready to search instantly
 ```

@@ -166,7 +166,7 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
   - `check_far_compliance` - Check compliance requirements for acquisitions
 
 **3. Loaders (`src/usaspending_mcp/loaders/`)**
-- **far.py**: Loads FAR JSON data from `docs/data/far/` into memory during initialization
+- **far.py**: Loads FAR JSON data from `src/usaspending_mcp/data/far/` into memory during initialization
 
 **4. Utilities (`src/usaspending_mcp/utils/`)**
 - **retry.py**: Exponential backoff retry logic using tenacity library
@@ -264,6 +264,14 @@ src/usaspending_mcp/
 ├── loaders/
 │   ├── __init__.py
 │   └── far.py             # FAR data loading
+├── data/                  # Runtime data files
+│   ├── __init__.py
+│   └── far/               # FAR JSON data files (Parts 14, 15, 16, 19)
+│       ├── __init__.py
+│       ├── far_part14.json
+│       ├── far_part15.json
+│       ├── far_part16.json
+│       └── far_part19.json
 └── utils/
     ├── __init__.py
     ├── constants.py       # Centralized constants and mappings
@@ -295,9 +303,7 @@ docs/
 │   ├── TESTING_GUIDE.md
 │   ├── SERVER_MANAGER_GUIDE.md
 │   └── PRODUCTION_MONITORING_GUIDE.md
-├── reference/              # API mappings, field dictionary, etc.
-└── data/
-    └── far/                # FAR JSON data files (Parts 14, 15, 16, 19)
+└── reference/              # API mappings, field dictionary, etc.
 
 tests/
 ├── conftest.py             # Pytest fixtures and config
@@ -327,9 +333,9 @@ start_mcp_server.sh            # Script to start MCP server in HTTP mode
 server_manager.py              # Manage running server instances
 ```
 
-## Available Tools - 27 Tools Organized by 6 Modules
+## Available Tools - 32 Tools Organized by 6 Modules
 
-### Module 1: Award Discovery Tools (6 tools - `tools/awards.py`)
+### Module 1: Award Discovery Tools (7 tools - `tools/awards.py`)
 
 - `search_federal_awards` - Search federal awards by agency, recipient, time period, and other filters
   - **Advanced Features**: `aggregate_results` (group by recipient), `sort_by_relevance` (intelligent ranking), `include_explanations` (show match reasons)
@@ -441,7 +447,7 @@ The server queries USASpending.gov API v2:
 
 ### FAR Data
 
-FAR data is loaded once during initialization from JSON files in `docs/data/far/`:
+FAR data is loaded once during initialization from JSON files in `src/usaspending_mcp/data/far/`:
 - FAR Part 14 (Sealed Bidding)
 - FAR Part 15 (Competitive Procedures)
 - FAR Part 16 (Types of Contracts)
@@ -519,7 +525,6 @@ pytest tests/unit/test_tools.py::test_search_federal_awards -v
 
 - **Main branch**: Production-ready code
 - **Recent commits**: Performance improvements, bug fixes, documentation updates
-- **Untracked files**: GEMINI.md (can be ignored)
 
 ## Common Pitfalls
 
@@ -560,3 +565,85 @@ For deep dives, refer to:
 
 **Project Overview**
 - **Implementation Summary**: `IMPLEMENTATION_SUMMARY.md` - Set-aside filtering and recent feature implementations
+
+## Documentation Maintenance Policy
+
+**IMPORTANT: Claude Code must follow these rules when making changes to the project:**
+
+### Required Updates After Changes
+
+When making ANY of the following types of changes, Claude Code MUST update these three files:
+
+1. **CLAUDE.md** - Project context and instructions (this file)
+2. **CHANGELOG.md** - Version history following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
+3. **README.md** - User-facing documentation and quick start guide
+
+### When to Update
+
+Update these files when changes involve:
+
+- ✅ **Project structure changes** (moving files, new directories, reorganization)
+- ✅ **Configuration changes** (new environment variables, config file updates)
+- ✅ **New features or tools** (new MCP tools, utilities, capabilities)
+- ✅ **Breaking changes** (API changes, removed features, renamed commands)
+- ✅ **Bug fixes** (significant fixes that affect usage or behavior)
+- ✅ **Documentation improvements** (new guides, updated examples)
+- ✅ **Build/deployment changes** (Docker, dependencies, installation steps)
+
+### Update Checklist
+
+After making changes, Claude Code should:
+
+1. **Update CLAUDE.md** if:
+   - Project structure changed (file locations, new directories)
+   - Architecture changed (new components, refactored modules)
+   - Development commands changed (new scripts, different workflows)
+   - Common pitfalls need documenting (new gotchas discovered)
+
+2. **Update CHANGELOG.md** always:
+   - Add new version entry with today's date
+   - Use semantic versioning (MAJOR.MINOR.PATCH)
+   - Categorize changes: Added, Changed, Fixed, Removed, Documentation
+   - Include technical details and file counts
+   - Add verification checklist
+
+3. **Update README.md** if:
+   - Installation steps changed
+   - Quick start guide affected
+   - Project structure diagram needs updating
+   - New major features added (visible to end users)
+
+### Version Numbering (Semantic Versioning)
+
+- **MAJOR** (X.0.0): Breaking changes, major architecture changes
+- **MINOR** (0.X.0): New features, non-breaking additions (most changes)
+- **PATCH** (0.0.X): Bug fixes, small corrections, documentation only
+
+### Example Workflow
+
+```
+User: "Move the FAR data to a better location"
+↓
+Claude makes changes:
+  - Moves files
+  - Updates config
+  - Updates loaders
+  - Tests changes
+↓
+Claude AUTOMATICALLY updates:
+  1. CLAUDE.md (project structure section)
+  2. CHANGELOG.md (new version 2.2.0 entry)
+  3. README.md (if structure diagram affected)
+↓
+Claude confirms: "All changes made and documentation updated!"
+```
+
+### Important Notes
+
+- **Don't wait to be asked** - Update documentation proactively
+- **Be thorough** - Document all significant changes
+- **Be consistent** - Follow existing formats and styles
+- **Be specific** - Include file names, line counts, verification steps
+- **Ask if unsure** - Better to ask than skip documentation
+
+This ensures the project documentation always stays current and accurate!

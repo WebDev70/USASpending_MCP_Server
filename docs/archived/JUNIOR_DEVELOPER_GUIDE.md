@@ -772,7 +772,7 @@ def load_far_all_parts() -> dict:
     """
     far_data = {}
     for part_num in [14, 15, 16, 19]:
-        with open(f"docs/data/far/far_part{part_num}.json") as f:
+        with open(f"src/usaspending_mcp/data/far/far_part{part_num}.json") as f:
             far_data[part_num] = json.load(f)
     return far_data
 ```
