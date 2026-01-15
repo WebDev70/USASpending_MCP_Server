@@ -188,7 +188,7 @@ usaspending-mcp/
 ├── logs/                             # Generated log files (gitignored)
 ├── .venv/                            # Virtual environment (gitignored)
 ├── pyproject.toml                    # Project metadata and dependencies
-├── requirements.txt                  # Pinned dependency versions
+├── pyproject.toml                  # Pinned dependency versions
 ├── pytest.ini                        # Pytest configuration
 ├── start_mcp_server.sh               # Startup script for HTTP mode
 ├── server_manager.py                 # Manage running server instances
@@ -1813,7 +1813,7 @@ The rate limiter protects against abuse:
 
 ```bash
 # Always pin dependencies to prevent unexpected changes
-# requirements.txt:
+# pyproject.toml:
 fastmcp==1.0.5
 httpx==0.27.0
 uvicorn[standard]==0.28.0
@@ -1823,7 +1823,7 @@ pip install safety
 safety check
 
 # Update safely
-pip install --upgrade-strategy only-if-needed -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ### Environment Variables
@@ -1870,7 +1870,7 @@ else:
 source .venv/bin/activate
 
 # 2. Check dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # 3. Start server
 ./start_mcp_server.sh

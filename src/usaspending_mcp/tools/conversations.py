@@ -28,14 +28,14 @@ This is called "dependency injection" and is a professional pattern.
 """
 
 import logging
-from typing import Optional
+import json
+import asyncio
+import uvicorn
 
 import httpx
 from fastmcp import FastMCP
-from mcp.types import TextContent
 
 # Import utilities we need
-from usaspending_mcp.utils.logging import log_tool_execution
 from usaspending_mcp.utils.conversation_logging import get_conversation_logger
 
 # Module logger
@@ -51,6 +51,10 @@ def register_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all conversation management tools with the FastMCP application.
@@ -94,13 +98,13 @@ def register_tools(
     - conversation_id="550e8400-e29b-41d4-a716-446655440000" → Returns all tool calls in that conversation
     """,
     )
-    async def get_conversation(conversation_id: str, user_id: str = "anonymous") -> list[TextContent]:
+    async def get_conversation(conversation_id: str, user_id: str = "anonymous") -> str:
         """Retrieve a conversation by ID"""
         conv_logger = get_conversation_logger()
         records = conv_logger.get_conversation(conversation_id, user_id)
 
         if not records:
-            return [TextContent(type="text", text=f"No conversation found with ID: {conversation_id}")]
+            return f"No conversation found with ID: {conversation_id}"
 
         output = f"=== Conversation {conversation_id} ===\n"
         output += f"User: {user_id}\n"
@@ -119,7 +123,7 @@ def register_tools(
                 output += f"Error: {record['error_message']}\n"
             output += "\n"
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -148,13 +152,13 @@ def register_tools(
     - Calling with user_id="user123" → Returns their recent conversations
     """,
     )
-    async def list_conversations(user_id: str = "anonymous", limit: int = 20) -> list[TextContent]:
+    async def list_conversations(user_id: str = "anonymous", limit: int = 20) -> str:
         """List conversations for a user"""
         conv_logger = get_conversation_logger()
         conversations = conv_logger.list_user_conversations(user_id, limit=min(limit, 100))
 
         if not conversations:
-            return [TextContent(type="text", text=f"No conversations found for user: {user_id}")]
+            return f"No conversations found for user: {user_id}"
 
         output = f"=== Conversations for {user_id} ===\n"
         output += f"Found {len(conversations)} conversations\n"
@@ -168,7 +172,7 @@ def register_tools(
             output += f"   Success Rate: {conv['success_count']}/{conv['message_count']} "
             output += f"({100*conv['success_count']/conv['message_count']:.1f}%)\n\n"
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -197,13 +201,13 @@ def register_tools(
     )
     async def get_conversation_summary(
         conversation_id: str, user_id: str = "anonymous"
-    ) -> list[TextContent]:
+    ) -> str:
         """Get conversation summary statistics"""
         conv_logger = get_conversation_logger()
         summary = conv_logger.get_conversation_summary(conversation_id, user_id)
 
         if not summary:
-            return [TextContent(type="text", text=f"No conversation found with ID: {conversation_id}")]
+            return f"No conversation found with ID: {conversation_id}"
 
         output = "=== Conversation Summary ===\n"
         output += f"ID: {summary['conversation_id']}\n"
@@ -224,7 +228,7 @@ def register_tools(
         output += f"  First: {summary['first_message_time']}\n"
         output += f"  Last: {summary['last_message_time']}\n"
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -249,7 +253,7 @@ def register_tools(
     - user_id="user123" → Returns their tool usage patterns
     """,
     )
-    async def get_tool_usage_stats(user_id: str = "anonymous") -> list[TextContent]:
+    async def get_tool_usage_stats(user_id: str = "anonymous") -> str:
         """Get tool usage statistics for a user"""
         conv_logger = get_conversation_logger()
         stats = conv_logger.get_tool_usage_stats(user_id)
@@ -273,7 +277,7 @@ def register_tools(
                 output += f"  Errors: {tool_stats['error_count']}\n"
                 output += f"  Conversations: {tool_stats['conversations']}\n\n"
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
     def run_server():

@@ -54,6 +54,10 @@ def register_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all profile analysis tools with the FastMCP application.
@@ -77,6 +81,21 @@ def register_tools(
         toptier_agency_map: Dictionary mapping agency names to official names
         subtier_agency_map: Dictionary mapping sub-agencies to tuples
     """
+
+    # ================================================================================
+    # HELPER FUNCTIONS
+    # ================================================================================
+
+    def get_default_date_range() -> tuple[str, str]:
+        """Get 180-day lookback date range (YYYY-MM-DD format)"""
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        start_date = today - timedelta(days=180)
+        return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+    # ================================================================================
+    # TOOL DEFINITIONS
+    # ================================================================================
 
     @app.tool(
         name="get_vendor_profile",
@@ -104,7 +123,7 @@ def register_tools(
     - "get_vendor_profile vendor_name:\"Dell\" show_contracts:true" → Dell with contracts
     """,
     )
-    async def get_vendor_profile(vendor_name: str, show_contracts: str = "false") -> list[TextContent]:
+    async def get_vendor_profile(vendor_name: str, show_contracts: str = "false") -> str:
         """Get detailed vendor/recipient profile"""
         output = "=" * 100 + "\n"
         output += f"VENDOR PROFILE: {vendor_name}\n"
@@ -171,7 +190,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
     # ================================================================================
@@ -204,7 +223,7 @@ def register_tools(
     - "get_agency_profile agency:hhs" → HHS agency profile
     """,
     )
-    async def get_agency_profile(agency: str, detail_level: str = "detail") -> list[TextContent]:
+    async def get_agency_profile(agency: str, detail_level: str = "detail") -> str:
         """Get detailed federal agency profile"""
         output = "=" * 100 + "\n"
         output += f"FEDERAL AGENCY PROFILE: {agency.upper()}\n"
@@ -284,7 +303,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -330,7 +349,7 @@ def register_tools(
         agency: Optional[str] = None,
         min_amount: Optional[int] = None,
         max_amount: Optional[int] = None,
-    ) -> list[TextContent]:
+    ) -> str:
         """Get top federal vendors ranked by number of contracts"""
         logger.debug(
             f"Tool call received: get_top_vendors_by_contract_count with limit={limit}, award_type={award_type}, start_date={start_date}, end_date={end_date}, agency={agency}"
@@ -363,7 +382,7 @@ def register_tools(
 
         # Add agency filter if specified
         if agency:
-            agency_mapping = TOPTIER_AGENCY_MAP.copy()
+            agency_mapping = toptier_agency_map.copy()
             agency_name = agency_mapping.get(agency.lower(), agency)
             filters["awarding_agency_name"] = agency_name
 
@@ -384,15 +403,21 @@ def register_tools(
                 "limit": 100,  # Fetch 100 at a time for better aggregation
             }
 
-            result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
+            result = await make_api_request(
+                http_client,
+                "search/spending_by_award",
+                base_url,
+                json_data=payload,
+                method="POST"
+            )
 
             if "error" in result:
-                return [TextContent(type="text", text=f"Error fetching vendor data: {result.get('error', 'Unknown error')}")]
+                return f"Error fetching vendor data: {result.get('error', 'Unknown error')}"
 
             awards = result.get("results", [])
 
             if not awards:
-                return [TextContent(type="text", text="No awards found matching your criteria.")]
+                return "No awards found matching your criteria."
 
             # Aggregate data by vendor
             vendor_stats = {}
@@ -454,11 +479,11 @@ def register_tools(
             output += f"  - {format_currency(top_total)} spending ({top_total/total_spending*100:.1f}% of total)\n"
             output += "=" * 120 + "\n"
 
-            return [TextContent(type="text", text=output)]
+            return output
 
         except Exception as e:
             logger.error(f"Error in get_top_vendors_by_contract_count: {str(e)}")
-            return [TextContent(type="text", text=f"Error analyzing vendors: {str(e)}")]
+            return f"Error analyzing vendors: {str(e)}"
 
 
 
@@ -509,7 +534,7 @@ def register_tools(
     @log_tool_execution
     async def analyze_small_business(
         sb_type: Optional[str] = None, agency: Optional[str] = None, fiscal_year: Optional[str] = None
-    ) -> list[TextContent]:
+    ) -> str:
         """Analyze small business and disadvantaged business spending with actual data from USASpending API.
 
         DOCUMENTATION REFERENCES:
@@ -533,7 +558,7 @@ def register_tools(
             sb_type_mapping = {
                 "sdvosb": ["SDVOSBC", "SDVOSBS"],
                 "wosb": ["WOSB", "EDWOSB"],
-                "8a": ["8A"],
+                "8a": ["8A", "8AN", "8ANC", "8ANS"],  # Include all 8(a) variants
                 "hubzone": ["HZC", "HZS"],
                 "small_business": ["SBA", "SBP"],
                 "veteran": ["VSA", "VSS", "SDVOSBC", "SDVOSBS"],
@@ -560,7 +585,7 @@ def register_tools(
             output += "-" * 100 + "\n\n"
 
             # Map agency parameter to agency name
-            agency_mapping = TOPTIER_AGENCY_MAP.copy()
+            agency_mapping = toptier_agency_map.copy()
             agency_name = agency_mapping.get(
                 agency.lower() if agency else "dod", "Department of Defense"
             )
@@ -595,7 +620,11 @@ def register_tools(
                 }
 
                 result = await make_api_request(
-                    "search/spending_by_award", json_data=payload, method="POST"
+                    http_client,
+                    "search/spending_by_award",
+                    base_url,
+                    json_data=payload,
+                    method="POST"
                 )
 
                 if "error" not in result:
@@ -664,7 +693,7 @@ def register_tools(
             logger.error(f"Error in analyze_small_business: {traceback.format_exc()}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 

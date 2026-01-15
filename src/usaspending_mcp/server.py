@@ -28,6 +28,9 @@ import httpx
 import uvicorn
 from fastmcp import FastMCP
 
+# Import configuration
+from usaspending_mcp.config import ServerConfig
+
 # Import conversation logging utilities
 from usaspending_mcp.utils.conversation_logging import (
     initialize_conversation_logger,
@@ -49,7 +52,10 @@ from usaspending_mcp.utils.relevance_scoring import RelevanceScorer
 is_stdio_mode = len(sys.argv) > 1 and sys.argv[1] == "--stdio"
 
 # Set up structured logging (JSON only for HTTP mode)
-setup_structured_logging(log_level="INFO", json_output=not is_stdio_mode)
+setup_structured_logging(
+    log_level=ServerConfig.LOG_LEVEL,
+    json_output=not is_stdio_mode
+)
 logger = get_logger("server")
 
 # Initialize FastMCP server
@@ -137,6 +143,10 @@ register_all_tools(
     AWARD_TYPE_MAP,
     TOPTIER_AGENCY_MAP,
     SUBTIER_AGENCY_MAP,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 )
 logger.info("✅ All tools registered successfully!")
 

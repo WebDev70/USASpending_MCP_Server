@@ -415,6 +415,77 @@ def format_currency(amount: float) -> str:
         return f"${amount:.2f}"
 
 
+# ============ RESPONSE STRUCTURE ANALYZER ============
+def analyze_response_structure(response_data: dict) -> dict:
+    """
+    Analyze the structure of an API response without logging full content.
+
+    This captures metadata about the response for debugging and monitoring:
+    - Top-level keys present
+    - Array lengths (e.g., "results: 25 items")
+    - Pagination metadata
+    - Response counts and totals
+
+    WHY?
+    We want to know WHAT came back from the API without filling logs with
+    huge amounts of actual data. This helps debug issues like:
+    - "Did the API return results?"
+    - "How many items were in the response?"
+    - "What fields are present in this response?"
+
+    Args:
+        response_data: The JSON response from the API
+
+    Returns:
+        A dictionary with response structure metadata:
+        {
+            "top_level_keys": ["results", "page_metadata", "total"],
+            "results_count": 25,
+            "total_count": 1234,
+            "has_pagination": true,
+            "page_metadata": {"page": 1, "limit": 100}
+        }
+    """
+    structure = {
+        "top_level_keys": list(response_data.keys()) if isinstance(response_data, dict) else []
+    }
+
+    # Check for common response patterns
+    if isinstance(response_data, dict):
+        # Count results array if present
+        if "results" in response_data:
+            results = response_data["results"]
+            if isinstance(results, list):
+                structure["results_count"] = len(results)
+            elif isinstance(results, dict):
+                structure["results_type"] = "dict"
+                structure["results_keys"] = list(results.keys())
+
+        # Extract pagination metadata
+        if "page_metadata" in response_data:
+            structure["has_pagination"] = True
+            metadata = response_data["page_metadata"]
+            if isinstance(metadata, dict):
+                structure["page_metadata"] = {
+                    k: v for k, v in metadata.items()
+                    if k in ["page", "limit", "total", "hasNext", "hasPrevious"]
+                }
+
+        # Extract total count if available
+        for total_key in ["total", "total_results", "count", "total_count"]:
+            if total_key in response_data:
+                structure["total_count"] = response_data[total_key]
+                break
+
+        # Check for awards array (common in search responses)
+        if "awards" in response_data:
+            awards = response_data["awards"]
+            if isinstance(awards, list):
+                structure["awards_count"] = len(awards)
+
+    return structure
+
+
 # ============ API REQUEST HANDLER ============
 async def make_api_request(
     client: httpx.AsyncClient,
@@ -474,7 +545,24 @@ async def make_api_request(
                 return {"error": f"API Error {response.status_code}: {str(e)}"}
 
         # Success! Parse and return the JSON response
-        return response.json()
+        response_data = response.json()
+
+        # Log response structure for debugging and monitoring
+        try:
+            structure = analyze_response_structure(response_data)
+            logger.info(
+                f"API response structure from {endpoint}",
+                extra={
+                    "endpoint": endpoint,
+                    "method": method,
+                    "response_structure": structure
+                }
+            )
+        except Exception as log_error:
+            # Don't fail the request if structure analysis fails
+            logger.debug(f"Could not analyze response structure: {log_error}")
+
+        return response_data
 
     except Exception as e:
         # Network error or other problem

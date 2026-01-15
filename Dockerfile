@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Copy project metadata and install Python dependencies
+COPY pyproject.toml /app/
+COPY src/ /app/src/
+RUN pip install --user --no-cache-dir .
 
 # Final stage
 FROM python:3.12-slim
@@ -28,10 +29,9 @@ RUN useradd -m -u 1000 appuser
 # Copy Python dependencies from builder
 COPY --from=builder /root/.local /home/appuser/.local
 
-# Copy application code
+# Copy application code and metadata
 COPY src/ /app/src/
-COPY docs/ /app/docs/
-COPY pyproject.toml .
+COPY pyproject.toml /app/
 COPY docker-entrypoint.sh /app/
 
 # Set environment variables
@@ -39,11 +39,13 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install the package
-RUN pip install --user --no-cache-dir -e .
+# Install the package (system-wide is fine in containers)
+RUN pip install --no-cache-dir .
 
-# Change ownership to appuser
-RUN chown -R appuser:appuser /app && chmod +x /app/docker-entrypoint.sh
+# Create logs directory and change ownership to appuser
+RUN mkdir -p /app/logs && \
+    chown -R appuser:appuser /app && \
+    chmod +x /app/docker-entrypoint.sh
 
 # Switch to non-root user
 USER appuser

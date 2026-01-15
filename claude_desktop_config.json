@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "usaspending": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "usaspending-mcp-server",
+        "python",
+        "-m",
+        "usaspending_mcp.server",
+        "--stdio"
+      ]
+    }
+  }
+}

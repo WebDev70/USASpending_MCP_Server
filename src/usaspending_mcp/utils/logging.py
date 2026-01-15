@@ -16,10 +16,15 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Optional
 
-from pythonjsonlogger import jsonlogger
+try:
+    # Try new import path first (pythonjsonlogger >= 3.0.0)
+    from pythonjsonlogger.json import JsonFormatter as BaseJsonFormatter
+except ImportError:
+    # Fall back to old import path (pythonjsonlogger < 3.0.0)
+    from pythonjsonlogger.jsonlogger import JsonFormatter as BaseJsonFormatter
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
+class CustomJsonFormatter(BaseJsonFormatter):
     """Custom JSON formatter with additional context fields."""
 
     def add_fields(self, log_record: dict, record: logging.LogRecord, message_dict: dict) -> None:
@@ -123,11 +128,27 @@ def setup_structured_logging(
     # Set up file logging with automatic rotation
     # If no log file specified, use default location in project logs directory
     if log_file is None:
-        # Get the project root (go up from src/usaspending_mcp/utils/)
-        project_root = Path(__file__).resolve().parent.parent.parent.parent
-        logs_dir = project_root / "logs"
-        logs_dir.mkdir(exist_ok=True)
-        log_file = str(logs_dir / "usaspending_mcp.log")
+        # Try to use project logs directory if we're in development mode
+        # Otherwise fall back to a system temp directory or user home
+        try:
+            # Get the project root (go up from src/usaspending_mcp/utils/)
+            project_root = Path(__file__).resolve().parent.parent.parent.parent
+            # Check if we're in a writable development directory (not site-packages)
+            if "site-packages" not in str(project_root):
+                logs_dir = project_root / "logs"
+                logs_dir.mkdir(exist_ok=True)
+                log_file = str(logs_dir / "usaspending_mcp.log")
+            else:
+                # We're installed as a package, use user's home directory
+                logs_dir = Path.home() / ".usaspending_mcp" / "logs"
+                logs_dir.mkdir(parents=True, exist_ok=True)
+                log_file = str(logs_dir / "usaspending_mcp.log")
+        except (OSError, PermissionError):
+            # If we can't create logs in either location, use temp directory
+            import tempfile
+            logs_dir = Path(tempfile.gettempdir()) / "usaspending_mcp_logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            log_file = str(logs_dir / "usaspending_mcp.log")
 
     # Create logs directory if it doesn't exist
     log_path = Path(log_file)

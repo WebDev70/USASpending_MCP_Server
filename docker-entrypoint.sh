@@ -16,7 +16,7 @@ from usaspending_mcp.utils.logging import setup_structured_logging, get_logger
 setup_structured_logging(log_level="INFO", json_output=True)
 logger = get_logger("docker-entrypoint")
 
-async def run_server():
+def run_server():
     """Run the FastMCP server with 0.0.0.0 binding for Docker"""
     try:
         from usaspending_mcp.server import app, rate_limiter
@@ -37,5 +37,5 @@ async def run_server():
         sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(run_server())
+    run_server()
 EOF

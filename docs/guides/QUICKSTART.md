@@ -158,7 +158,7 @@ Results: 10
 │       ├── SERVER_MANAGER_GUIDE.md
 │       └── PRODUCTION_MONITORING_GUIDE.md
 ├── README.md                          ← Project overview
-├── requirements.txt                   ← Python dependencies
+├── pyproject.toml                     ← Project metadata and dependencies
 ├── start_mcp_server.sh                ← HTTP server launcher
 ├── test_mcp_client.sh                 ← CLI test harness
 └── LICENSE                            ← MIT License

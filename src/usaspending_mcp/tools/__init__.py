@@ -7,7 +7,7 @@ When the application starts, it calls register_all_tools() to
 register every tool available in the system.
 
 WHY HAVE THIS FILE?
-Instead of having all 28 tools in server.py, we spread them across
+Instead of having all 32 tools in server.py, we spread them across
 multiple focused modules (awards.py, spending.py, etc.).
 This file coordinates all those modules and registers them with the app.
 
@@ -58,6 +58,10 @@ def register_all_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all MCP tools with the FastMCP application.
@@ -76,6 +80,7 @@ def register_all_tools(
     - base_url: The USASpending API base URL
     - logger_instance: For logging
     - Agency maps: For normalizing agency names
+    - Query refinement utilities: For intelligent search features
 
     Instead of having these be global variables scattered
     everywhere, we pass them explicitly. This is cleaner
@@ -90,6 +95,10 @@ def register_all_tools(
         award_type_map: Dictionary mapping award types to codes
         toptier_agency_map: Dictionary mapping agency names to official names
         subtier_agency_map: Dictionary mapping sub-agencies
+        conversation_logger: Conversation tracking logger
+        query_context_analyzer: Query context analysis utility
+        result_aggregator: Result aggregation utility
+        relevance_scorer: Relevance scoring utility
     """
 
     # Import each tool module
@@ -103,7 +112,8 @@ def register_all_tools(
     try:
         awards.register_tools(
             app, http_client, rate_limiter, base_url, logger_instance,
-            award_type_map, toptier_agency_map, subtier_agency_map
+            award_type_map, toptier_agency_map, subtier_agency_map,
+            conversation_logger, query_context_analyzer, result_aggregator, relevance_scorer
         )
         logger_instance.info("✓ Award discovery tools registered (6 tools)")
     except Exception as e:
@@ -114,7 +124,8 @@ def register_all_tools(
     try:
         spending.register_tools(
             app, http_client, rate_limiter, base_url, logger_instance,
-            award_type_map, toptier_agency_map, subtier_agency_map
+            award_type_map, toptier_agency_map, subtier_agency_map,
+            conversation_logger, query_context_analyzer, result_aggregator, relevance_scorer
         )
         logger_instance.info("✓ Spending tools registered (8 tools)")
     except Exception as e:
@@ -125,7 +136,8 @@ def register_all_tools(
     try:
         classifications.register_tools(
             app, http_client, rate_limiter, base_url, logger_instance,
-            award_type_map, toptier_agency_map, subtier_agency_map
+            award_type_map, toptier_agency_map, subtier_agency_map,
+            conversation_logger, query_context_analyzer, result_aggregator, relevance_scorer
         )
         logger_instance.info("✓ Classification tools registered (5 tools)")
     except Exception as e:
@@ -136,7 +148,8 @@ def register_all_tools(
     try:
         profiles.register_tools(
             app, http_client, rate_limiter, base_url, logger_instance,
-            award_type_map, toptier_agency_map, subtier_agency_map
+            award_type_map, toptier_agency_map, subtier_agency_map,
+            conversation_logger, query_context_analyzer, result_aggregator, relevance_scorer
         )
         logger_instance.info("✓ Profile tools registered (4 tools)")
     except Exception as e:
@@ -147,7 +160,8 @@ def register_all_tools(
     try:
         conversations.register_tools(
             app, http_client, rate_limiter, base_url, logger_instance,
-            award_type_map, toptier_agency_map, subtier_agency_map
+            award_type_map, toptier_agency_map, subtier_agency_map,
+            conversation_logger, query_context_analyzer, result_aggregator, relevance_scorer
         )
         logger_instance.info("✓ Conversation tools registered (4 tools)")
     except Exception as e:
@@ -161,7 +175,7 @@ def register_all_tools(
     except Exception as e:
         logger_instance.warning(f"Could not register FAR tools: {e}")
 
-    logger_instance.info("✅ All tool modules registered successfully! (27 total tools)")
+    logger_instance.info("✅ All tool modules registered successfully! (32 total tools)")
     logger_instance.info("   - Award discovery: 6 tools")
     logger_instance.info("   - Spending analysis: 8 tools")
     logger_instance.info("   - Classifications: 5 tools")

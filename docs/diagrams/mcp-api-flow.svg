@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="260" viewBox="0 0 1180 260">
+  <style>
+    .box { fill: #f6f7f9; stroke: #1f2937; stroke-width: 2; rx: 10; ry: 10; }
+    .text { font-family: Arial, sans-serif; font-size: 14px; fill: #111827; }
+    .arrow { stroke: #1f2937; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .sub { font-size: 12px; fill: #374151; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1f2937" />
+    </marker>
+  </defs>
+
+  <rect class="box" x="20" y="40" width="130" height="70" />
+  <text class="text" x="85" y="70" text-anchor="middle">User Prompt</text>
+
+  <rect class="box" x="170" y="40" width="150" height="70" />
+  <text class="text" x="245" y="65" text-anchor="middle">FastMCP Tool</text>
+  <text class="sub" x="245" y="85" text-anchor="middle">@app.tool</text>
+
+  <rect class="box" x="350" y="40" width="150" height="70" />
+  <text class="text" x="425" y="65" text-anchor="middle">Tool Module</text>
+  <text class="sub" x="425" y="85" text-anchor="middle">payload + filters</text>
+
+  <rect class="box" x="530" y="40" width="150" height="70" />
+  <text class="text" x="605" y="65" text-anchor="middle">httpx Client</text>
+  <text class="sub" x="605" y="85" text-anchor="middle">async request</text>
+
+  <rect class="box" x="710" y="40" width="170" height="70" />
+  <text class="text" x="795" y="62" text-anchor="middle">USASpending API</text>
+  <text class="sub" x="795" y="82" text-anchor="middle">api/v2 endpoints</text>
+
+  <rect class="box" x="910" y="40" width="150" height="70" />
+  <text class="text" x="985" y="65" text-anchor="middle">JSON Response</text>
+
+  <rect class="box" x="1090" y="40" width="70" height="70" />
+  <text class="text" x="1125" y="70" text-anchor="middle">MCP</text>
+  <text class="sub" x="1125" y="88" text-anchor="middle">Output</text>
+
+  <path class="arrow" d="M150 75 L170 75" />
+  <path class="arrow" d="M320 75 L350 75" />
+  <path class="arrow" d="M500 75 L530 75" />
+  <path class="arrow" d="M680 75 L710 75" />
+  <path class="arrow" d="M880 75 L910 75" />
+  <path class="arrow" d="M1060 75 L1090 75" />
+
+  <rect class="box" x="350" y="150" width="520" height="70" />
+  <text class="text" x="610" y="178" text-anchor="middle">Format + Enrich</text>
+  <text class="sub" x="610" y="198" text-anchor="middle">currency, links, aggregations</text>
+
+  <path class="arrow" d="M985 110 L985 150" />
+  <path class="arrow" d="M870 185 L1090 185" />
+</svg>

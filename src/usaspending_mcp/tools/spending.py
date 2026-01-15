@@ -65,6 +65,10 @@ def register_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all spending analysis tools with the FastMCP application.
@@ -128,7 +132,7 @@ def register_tools(
     """,
     )
     @log_tool_execution
-    async def analyze_federal_spending(query: str) -> list[TextContent]:
+    async def analyze_federal_spending(query: str) -> str:
         """Analyze federal spending with aggregated insights.
 
         DOCUMENTATION REFERENCES:
@@ -185,7 +189,7 @@ def register_tools(
     - "get_spending_by_state top_n:20" → Top 20 states ranked by spending
     """,
     )
-    async def get_spending_by_state(state: Optional[str] = None, top_n: int = 10) -> list[TextContent]:
+    async def get_spending_by_state(state: Optional[str] = None, top_n: int = 10) -> str:
         """Get federal spending by state and territory"""
         output = "=" * 100 + "\n"
         output += "FEDERAL SPENDING BY STATE AND TERRITORY\n"
@@ -245,7 +249,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -275,7 +279,7 @@ def register_tools(
     )
     async def get_spending_trends(
         period: str = "fiscal_year", agency: Optional[str] = None, award_type: Optional[str] = None
-    ) -> list[TextContent]:
+    ) -> str:
         """Get federal spending trends over time"""
         output = "=" * 100 + "\n"
         output += f"FEDERAL SPENDING TRENDS - {period.upper()}\n"
@@ -351,7 +355,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -378,7 +382,7 @@ def register_tools(
     - "compare_states states:Florida,Georgia,North Carolina" → Regional comparison
     """,
     )
-    async def compare_states(states: str, metric: str = "total") -> list[TextContent]:
+    async def compare_states(states: str, metric: str = "total") -> str:
         """Compare federal spending across states"""
         output = "=" * 100 + "\n"
         output += f"FEDERAL SPENDING COMPARISON BY STATE ({metric.upper()})\n"
@@ -437,7 +441,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -468,7 +472,7 @@ def register_tools(
     )
     async def emergency_spending_tracker(
         disaster_type: Optional[str] = None, year: Optional[str] = None, state: Optional[str] = None
-    ) -> list[TextContent]:
+    ) -> str:
         """Track emergency and disaster-related spending"""
         output = "=" * 100 + "\n"
         output += "FEDERAL EMERGENCY & DISASTER SPENDING TRACKER\n"
@@ -555,7 +559,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -585,7 +589,7 @@ def register_tools(
     )
     async def spending_efficiency_metrics(
         agency: Optional[str] = None, sector: Optional[str] = None, time_period: str = "annual"
-    ) -> list[TextContent]:
+    ) -> str:
         """Analyze federal spending efficiency and procurement patterns"""
         output = "=" * 100 + "\n"
         output += "FEDERAL SPENDING EFFICIENCY METRICS & PROCUREMENT ANALYSIS\n"
@@ -680,7 +684,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
     # ==================== DATA DICTIONARY CACHE ====================
@@ -774,7 +778,7 @@ def register_tools(
         state: Optional[str] = None,
         year: Optional[str] = None,
         max_results: int = 10,
-    ) -> list[TextContent]:
+    ) -> str:
         """Track emergency and disaster-related federal funding"""
 
         output = "=" * 100 + "\n"
@@ -841,7 +845,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -872,7 +876,7 @@ def register_tools(
     )
     async def get_budget_functions(
         agency: Optional[str] = None, detailed: str = "false"
-    ) -> list[TextContent]:
+    ) -> str:
         """Get federal spending by budget function"""
         output = "=" * 100 + "\n"
         output += "FEDERAL SPENDING BY BUDGET FUNCTION\n"
@@ -893,7 +897,7 @@ def register_tools(
                 "1100": "Personnel Compensation",
                 "2500": "Contractual Services",
                 "3100": "Supplies and Materials",
-                "4000": "Equipment",
+                "4001": "Equipment",
                 "4100": "Grants and Subsidies",
             }
 
@@ -911,7 +915,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -922,7 +926,7 @@ def register_tools(
         return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
 
 
-    async def analyze_awards_logic(args: dict) -> list[TextContent]:
+    async def analyze_awards_logic(args: dict) -> str:
         """Analytics logic for federal spending data"""
         # Get dynamic 180-day date range
         start_date, end_date = get_default_date_range()
@@ -988,11 +992,15 @@ def register_tools(
         # Get total count
         count_payload = {"filters": filters}
         count_result = await make_api_request(
-            "search/spending_by_award_count", json_data=count_payload, method="POST"
+            http_client,
+            "search/spending_by_award_count",
+            base_url,
+            json_data=count_payload,
+            method="POST"
         )
 
         if "error" in count_result:
-            return [TextContent(type="text", text=f"Error getting analytics: {count_result['error']}")]
+            return f"Error getting analytics: {count_result['error']}"
 
         total_count = sum(count_result.get("results", {}).values())
 
@@ -1004,7 +1012,13 @@ def register_tools(
             "limit": min(args.get("limit", 50), 100),
         }
 
-        result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
+        result = await make_api_request(
+            http_client,
+            "search/spending_by_award",
+            base_url,
+            json_data=payload,
+            method="POST"
+        )
 
         if "error" in result:
             return [
@@ -1014,11 +1028,11 @@ def register_tools(
         awards = result.get("results", [])
 
         if not awards:
-            return [TextContent(type="text", text="No awards found matching your criteria.")]
+            return "No awards found matching your criteria."
 
         # Generate analytics
         analytics_output = generate_spending_analytics(awards, total_count, args)
-        return [TextContent(type="text", text=analytics_output)]
+        return analytics_output
 
 
     def generate_spending_analytics(awards: list, total_count: int, args: dict) -> str:
@@ -1158,7 +1172,7 @@ def register_tools(
             },
         )
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
     logger_instance.info("Spending tools registered successfully")

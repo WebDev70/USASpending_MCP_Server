@@ -53,7 +53,7 @@ EXAMPLES:
 - search_far_regulations("contract negotiation", "15") → Negotiation procedures
 """,
     )
-    async def search_far_regulations(keyword: str, part: str = None) -> list[TextContent]:
+    async def search_far_regulations(keyword: str, part: str = None) -> str:
         """Search FAR regulations by keyword"""
         output = "=" * 100 + "\n"
         output += f"FAR SEARCH: '{keyword}'\n"
@@ -96,7 +96,7 @@ EXAMPLES:
             logger.error(f"Error in search_far_regulations: {e}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
     @app.tool(
         name="get_far_section",
@@ -120,7 +120,7 @@ EXAMPLES:
 - get_far_section("14.305") → Full text of FAR 14.305 (Sealed bidding evaluation)
 """,
     )
-    async def get_far_section(section_number: str) -> list[TextContent]:
+    async def get_far_section(section_number: str) -> str:
         """Get a specific FAR section by number"""
         output = "=" * 100 + "\n"
         output += f"FAR SECTION: {section_number}\n"
@@ -154,7 +154,7 @@ EXAMPLES:
             logger.error(f"Error in get_far_section: {e}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
     @app.tool(
         name="get_far_topic_sections",
@@ -180,7 +180,7 @@ EXAMPLES:
 - get_far_topic_sections("source selection", "15") → Source selection in Part 15
 """,
     )
-    async def get_far_topic_sections(topic: str, part: str = None) -> list[TextContent]:
+    async def get_far_topic_sections(topic: str, part: str = None) -> str:
         """Get FAR sections by topic"""
         output = "=" * 100 + "\n"
         output += f"FAR TOPIC LOOKUP: {topic}\n"
@@ -219,7 +219,7 @@ EXAMPLES:
             logger.error(f"Error in get_far_topic_sections: {e}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
     @app.tool(
         name="get_far_analytics_report",
@@ -247,7 +247,7 @@ EXAMPLES:
 
 """,
     )
-    async def get_far_analytics_report(report_type: str = "summary") -> list[TextContent]:
+    async def get_far_analytics_report(report_type: str = "summary") -> str:
         """Get FAR search analytics and usage patterns"""
         output = "=" * 100 + "\n"
         output += f"FAR ANALYTICS REPORT: {report_type.upper()}\n"
@@ -337,7 +337,7 @@ EXAMPLES:
             logger.error(f"Error in get_far_analytics_report: {e}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
     @app.tool(
         name="check_far_compliance",
@@ -365,7 +365,7 @@ EXAMPLES:
     )
     async def check_far_compliance(
         contracting_method: str, requirements: list = None
-    ) -> list[TextContent]:
+    ) -> str:
         """Check FAR compliance for contracting method"""
         output = "=" * 100 + "\n"
         output += f"FAR COMPLIANCE CHECK: {contracting_method}\n"
@@ -406,4 +406,4 @@ EXAMPLES:
             logger.error(f"Error in check_far_compliance: {e}")
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output

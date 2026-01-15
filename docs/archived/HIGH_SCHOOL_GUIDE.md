@@ -459,7 +459,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 #### Step 3: Install Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 **What gets installed:**
@@ -531,7 +531,7 @@ usaspending-mcp/
 │
 ├── tests/                  ← Unit tests
 ├── REFACTORING_*.md        ← Guides on the 2024 refactoring
-├── requirements.txt        ← Dependencies
+├── pyproject.toml        ← Dependencies
 └── pyproject.toml          ← Project config
 ```
 

@@ -21,7 +21,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # Install with dev dependencies
 pip install -e ".[dev]"
@@ -99,15 +99,49 @@ mypy src/
 
 ### Docker Deployment
 ```bash
-# Build Docker image
-docker build -t usaspending-mcp .
+# Build and run with Docker Compose (Recommended)
+docker-compose up --build -d
 
-# Run with Docker Compose
-docker-compose up
+# Check container is running
+docker ps | grep usaspending-mcp-server
 
-# Run standalone container
-docker run -p 3002:3002 usaspending-mcp
+# View logs
+docker-compose logs -f
+
+# Stop container
+docker-compose down
 ```
+
+#### Claude Desktop Integration
+
+After starting the Docker container, configure Claude Desktop to connect:
+
+**Config file location:**
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+**Configuration:**
+```json
+{
+  "mcpServers": {
+    "usaspending": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "usaspending-mcp-server",
+        "python",
+        "-m",
+        "usaspending_mcp.server",
+        "--stdio"
+      ]
+    }
+  }
+}
+```
+
+**Note:** Container name is `usaspending-mcp-server` (as defined in docker-compose.yml)
 
 For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 
@@ -116,7 +150,7 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 ### Core Components
 
 **1. Server (`src/usaspending_mcp/server.py`)** - REFACTORED 2024!
-- FastMCP application initialization (now only 199 lines, was 4,515!)
+- FastMCP application initialization (now only 202 lines, was 4,515!)
 - Imports tool modules and coordinates registration
 - USASpending.gov API integration
 - Dual transport support (stdio/HTTP with uvicorn)
@@ -125,7 +159,9 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 
 **2. Tools Module (`src/usaspending_mcp/tools/`)** - MODULAR ARCHITECTURE
 - **__init__.py**: Coordinates registration of all tool modules via `register_all_tools()`
-- **helpers.py**: Shared utilities (QueryParser, formatters, URL generators)
+- **helpers.py**: Shared utilities (QueryParser, formatters, URL generators, response structure logging)
+  - `analyze_response_structure()`: Extracts response metadata (keys, counts, pagination) without logging full content
+  - `make_api_request()`: Automatically logs response structure for all API calls
 - **awards.py**: Award discovery tools (6 tools)
   - `search_federal_awards` - Search by keyword, agency, recipient
   - `get_award_by_id` - Retrieve specific award
@@ -178,6 +214,8 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 - **logging.py**: Structured JSON logging utilities
   - JSON output for HTTP mode only (disabled in stdio mode to avoid MCP protocol conflicts)
   - Includes search analytics and tool execution logging
+  - **Response structure logging**: Automatically captures API response metadata (top-level keys, result counts, pagination info) via `analyze_response_structure()` in helpers.py
+  - Response metadata is logged at INFO level to `usaspending_mcp.log` without including actual response data
 - **conversation_logging.py**: Conversation management and analytics
   - Tracks conversation history and metadata
   - Provides statistics and tool usage analytics
@@ -246,96 +284,126 @@ For detailed Docker deployment instructions, see `DOCKER_GUIDE.md`
 ## Project Structure (After 2024 Refactoring)
 
 ```
-src/usaspending_mcp/
-├── server.py              # FastMCP app initialization (199 lines, was 4,515!)
-├── client.py              # MCP client for testing
-├── config.py              # Server configuration management
-├── __init__.py            # Package exports
-├── __main__.py            # Entry point
-├── tools/                 # MODULAR TOOL ARCHITECTURE
-│   ├── __init__.py        # register_all_tools() coordinator
-│   ├── helpers.py         # Shared utilities (QueryParser, formatters)
-│   ├── awards.py          # Award discovery tools (6 tools)
-│   ├── spending.py        # Spending analysis tools (8 tools)
-│   ├── classifications.py # NAICS/PSC analysis tools (5 tools)
-│   ├── profiles.py        # Vendor/agency profile tools (4 tools)
-│   ├── conversations.py   # Conversation management tools (4 tools)
-│   └── far.py             # FAR regulation tools (5 tools)
-├── loaders/
-│   ├── __init__.py
-│   └── far.py             # FAR data loading
-├── data/                  # Runtime data files
-│   ├── __init__.py
-│   └── far/               # FAR JSON data files (Parts 14, 15, 16, 19)
+usaspending-mcp/
+├── src/usaspending_mcp/       # Main application source code
+│   ├── server.py              # FastMCP app initialization (202 lines, was 4,515!)
+│   ├── client.py              # MCP client for testing
+│   ├── config.py              # Server configuration management
+│   ├── __init__.py            # Package exports
+│   ├── __main__.py            # Entry point
+│   ├── tools/                 # MODULAR TOOL ARCHITECTURE
+│   │   ├── __init__.py        # register_all_tools() coordinator
+│   │   ├── helpers.py         # Shared utilities (QueryParser, formatters)
+│   │   ├── awards.py          # Award discovery tools (6 tools)
+│   │   ├── spending.py        # Spending analysis tools (8 tools)
+│   │   ├── classifications.py # NAICS/PSC analysis tools (5 tools)
+│   │   ├── profiles.py        # Vendor/agency profile tools (4 tools)
+│   │   ├── conversations.py   # Conversation management tools (4 tools)
+│   │   └── far.py             # FAR regulation tools (5 tools)
+│   ├── loaders/
+│   │   ├── __init__.py
+│   │   └── far.py             # FAR data loading
+│   ├── data/                  # Runtime data files
+│   │   ├── __init__.py
+│   │   └── far/               # FAR JSON data files (Parts 14, 15, 16, 19)
+│   │       ├── __init__.py
+│   │       ├── far_part14.json
+│   │       ├── far_part15.json
+│   │       ├── far_part16.json
+│   │       └── far_part19.json
+│   └── utils/                 # Utility modules
 │       ├── __init__.py
-│       ├── far_part14.json
-│       ├── far_part15.json
-│       ├── far_part16.json
-│       └── far_part19.json
-└── utils/
-    ├── __init__.py
-    ├── constants.py       # Centralized constants and mappings
-    ├── retry.py           # Retry logic with exponential backoff
-    ├── rate_limit.py      # Token bucket rate limiter
-    ├── logging.py         # Structured logging
-    ├── conversation_logging.py # Conversation tracking and analytics
-    ├── search_analytics.py # Search pattern tracking
-    ├── far.py             # FAR database utilities
-    ├── query_context.py   # Query refinement and progressive filtering
-    ├── result_aggregation.py # Result grouping and explanations
-    └── relevance_scoring.py # Intelligent result ranking and scoring
-
-docs/
-├── DOCUMENTATION_ROADMAP.md          # Learning paths by role
-├── API_RESOURCES.md                  # API reference data
-├── IMPLEMENTATION_SUMMARY.md         # Recent implementations and features
-├── guides/
-│   ├── QUICKSTART.md
-│   ├── STRUCTURED_LOGGING_GUIDE.md
-│   ├── CONVERSATION_LOGGING_GUIDE.md # Conversation tracking and analytics
-│   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
-│   ├── FAR_ANALYTICS_GUIDE.md
-│   ├── MULTI_TOOL_ANALYTICS_ARCHITECTURE.md
-│   ├── MCP_BEST_PRACTICES_REVIEW.md
-│   └── FUTURE_RECOMMENDATIONS.md
-├── dev/
-│   ├── ARCHITECTURE_GUIDE.md
-│   ├── TESTING_GUIDE.md
-│   ├── SERVER_MANAGER_GUIDE.md
-│   └── PRODUCTION_MONITORING_GUIDE.md
-└── reference/              # API mappings, field dictionary, etc.
-
-tests/
-├── conftest.py             # Pytest fixtures and config
-├── unit/
-│   ├── test_tools.py
-│   ├── test_utils_retry.py
-│   ├── test_utils_logging.py
-│   ├── test_utils_rate_limit.py
-│   ├── test_query_context.py # Tests for query context analysis
-│   ├── test_aggregation.py # Tests for result aggregation
-│   └── test_relevance_scoring.py # Tests for relevance scoring
-└── integration/
-
-Docker/
-├── Dockerfile              # Production-ready multi-stage build
-├── docker-compose.yml      # Container orchestration
-├── docker-entrypoint.sh    # Entry point script
-└── .dockerignore            # Build optimization
-
-pyproject.toml                 # Modern Python project config (build, dependencies, tools)
-pytest.ini                     # Pytest configuration
-requirements.txt               # Direct dependencies
-IMPLEMENTATION_SUMMARY.md      # Summary of recent implementations
-DOCKER_GUIDE.md               # Docker deployment guide
-CHANGELOG.md                  # Project changelog
-start_mcp_server.sh            # Script to start MCP server in HTTP mode
-server_manager.py              # Manage running server instances
+│       ├── constants.py       # Centralized constants and mappings
+│       ├── retry.py           # Retry logic with exponential backoff
+│       ├── rate_limit.py      # Token bucket rate limiter
+│       ├── logging.py         # Structured logging
+│       ├── conversation_logging.py # Conversation tracking and analytics
+│       ├── search_analytics.py # Search pattern tracking
+│       ├── far.py             # FAR database utilities
+│       ├── query_context.py   # Query refinement and progressive filtering
+│       ├── result_aggregation.py # Result grouping and explanations
+│       └── relevance_scoring.py # Intelligent result ranking and scoring
+│
+├── docs/                      # Documentation
+│   ├── DOCUMENTATION_ROADMAP.md # Learning paths by role
+│   ├── API_RESOURCES.md       # API reference data
+│   ├── guides/                # User and implementation guides
+│   │   ├── QUICKSTART.md
+│   │   ├── STRUCTURED_LOGGING_GUIDE.md
+│   │   ├── CONVERSATION_LOGGING_GUIDE.md
+│   │   ├── RATE_LIMITING_AND_RETRY_GUIDE.md
+│   │   ├── FAR_ANALYTICS_GUIDE.md
+│   │   ├── MULTI_TOOL_ANALYTICS_ARCHITECTURE.md
+│   │   ├── MCP_BEST_PRACTICES_REVIEW.md
+│   │   └── IMPLEMENTATION_SUMMARY.md
+│   ├── dev/                   # Developer guides
+│   │   ├── ARCHITECTURE_GUIDE.md
+│   │   ├── TESTING_GUIDE.md
+│   │   ├── SERVER_MANAGER_GUIDE.md
+│   │   └── PRODUCTION_MONITORING_GUIDE.md
+│   ├── archived/              # Archived documentation
+│   │   ├── FUTURE_RECOMMENDATIONS.md
+│   │   ├── HIGH_SCHOOL_GUIDE.md
+│   │   ├── JUNIOR_DEVELOPER_GUIDE.md
+│   │   ├── MARKDOWN_STYLE_GUIDE.md
+│   │   ├── REFACTORING_GUIDE.md
+│   │   ├── REFACTORING_INDEX.md
+│   │   ├── REFACTORING_SUMMARY.md
+│   │   ├── BUG_FIX_SUMMARY.md
+│   │   ├── CLAUDE_DOCX_FORMATTING_GUIDE.md
+│   │   └── README.md
+│   └── reference/             # API reference data (JSON files)
+│       ├── api-mappings.json
+│       ├── field-dictionary.json
+│       ├── query-optimization.json
+│       ├── query-templates.json
+│       ├── reference-data.json
+│       ├── sample-responses.json
+│       ├── set-asides.json
+│       ├── tools-catalog.json
+│       └── usaspending-api-spec.json
+│
+├── tests/                     # Test suite
+│   ├── conftest.py            # Pytest fixtures and config
+│   ├── test_set_aside_implementation.py # Set-aside feature tests
+│   ├── unit/                  # Unit tests
+│   │   ├── __init__.py
+│   │   ├── test_tools.py
+│   │   ├── test_utils_retry.py
+│   │   ├── test_utils_logging.py
+│   │   ├── test_utils_rate_limit.py
+│   │   ├── test_conversation_logging.py
+│   │   ├── test_query_context.py
+│   │   ├── test_aggregation.py
+│   │   └── test_relevance_scoring.py
+│   ├── integration/           # Integration tests
+│   │   └── __init__.py
+│   └── scripts/               # Test helper scripts
+│       ├── test_mcp_client.sh
+│       └── run_tests.sh
+│
+├── Dockerfile                 # Production-ready multi-stage build
+├── docker-compose.yml         # Container orchestration
+├── docker-entrypoint.sh       # Docker entry point script
+├── .dockerignore              # Docker build optimization
+│
+├── pyproject.toml             # Modern Python project config (build, dependencies, tools)
+├── pytest.ini                 # Pytest configuration
+├── start_mcp_server.sh        # Script to start MCP server in HTTP mode
+├── server_manager.py          # Manage running server instances
+│
+├── README.md                  # Project overview and quick start
+├── CLAUDE.md                  # This file - Claude Code development guide
+├── CHANGELOG.md               # Project changelog
+├── DOCKER_GUIDE.md            # Docker deployment guide
+├── AGENTS.md                  # AI agents documentation
+├── GEMINI.md                  # Gemini integration notes
+└── flake8-report.txt          # Code quality report
 ```
 
 ## Available Tools - 32 Tools Organized by 6 Modules
 
-### Module 1: Award Discovery Tools (7 tools - `tools/awards.py`)
+### Module 1: Award Discovery Tools (6 tools - `tools/awards.py`)
 
 - `search_federal_awards` - Search federal awards by agency, recipient, time period, and other filters
   - **Advanced Features**: `aggregate_results` (group by recipient), `sort_by_relevance` (intelligent ranking), `include_explanations` (show match reasons)
@@ -371,7 +439,7 @@ server_manager.py              # Manage running server instances
 - `get_top_vendors_by_contract_count` - Get top vendors ranked by number of contracts awarded (not dollar value)
 - `analyze_small_business` - Analyze small business set-asides and spending
 
-### FAR (Federal Acquisition Regulation) Tools (5 tools)
+### Module 5: FAR (Federal Acquisition Regulation) Tools (5 tools - `tools/far.py`)
 
 The server provides tools for searching and analyzing federal acquisition regulations:
 
@@ -381,7 +449,7 @@ The server provides tools for searching and analyzing federal acquisition regula
 - `get_far_analytics_report` - Generate analytics on FAR section usage and patterns
 - `check_far_compliance` - Check FAR compliance requirements for specific acquisition scenarios
 
-### Conversation Management Tools (4 tools)
+### Module 6: Conversation Management Tools (4 tools - `tools/conversations.py`)
 
 The server provides tools for tracking and analyzing conversation history:
 
@@ -533,8 +601,7 @@ pytest tests/unit/test_tools.py::test_search_federal_awards -v
 3. **Virtual environment**: Always ensure `.venv` is activated when running commands.
 4. **Port conflicts**: When running HTTP server, ensure port 3002 is available or use `server_manager.py` for automatic cleanup.
 5. **Docker binding issues**: The `docker-entrypoint.sh` script handles 0.0.0.0 binding for Docker containers. See `DOCKER_GUIDE.md` for details.
-6. **Untracked files**: `Dockerfile`, `docker-compose.yml`, `DOCKER_GUIDE.md`, and `CONVERSATION_LOGGING_GUIDE.md` are part of the project but untracked in git.
-7. **Query Refinement graceful degradation**: If conversation context extraction fails, standard results are returned. Query refinement features are wrapped in try/except and don't break the search tool.
+6. **Query Refinement graceful degradation**: If conversation context extraction fails, standard results are returned. Query refinement features are wrapped in try/except and don't break the search tool.
 
 ## Documentation Resources
 
@@ -645,5 +712,6 @@ Claude confirms: "All changes made and documentation updated!"
 - **Be consistent** - Follow existing formats and styles
 - **Be specific** - Include file names, line counts, verification steps
 - **Ask if unsure** - Better to ask than skip documentation
+- **Ask if unsure** - tail -f ~/.config/Claude/logs/mcp-server-usaspending.log 
 
 This ensures the project documentation always stays current and accurate!

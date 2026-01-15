@@ -12,7 +12,7 @@
 ```bash
 cd /Users/ronaldblakejr/Documents/MCP_Server/usaspending-mcp
 source .venv/bin/activate
-pip install pytest pytest-asyncio pytest-cov httpx
+pip install -e ".[test]"
 ```
 
 ### Run Tests (Pick One)
@@ -291,7 +291,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - run: pip install -r requirements.txt
+      - run: pip install -e ".[test]"
       - run: pytest test_mcp_tools_unit.py -v
 ```
 

@@ -4,7 +4,7 @@ This guide explains how to containerize and run the **USASpending MCP Server** u
 
 ## What is USASpending MCP Server?
 
-A FastMCP-based server that provides **27 tools** organized across 6 modules:
+A FastMCP-based server that provides **32 tools** organized across 6 modules:
 - **Award Discovery** (6 tools) - Search and analyze federal awards
 - **Spending Analysis** (8 tools) - Analyze spending patterns and trends
 - **Classification Analysis** (5 tools) - Industry, product type, and budget analysis
@@ -25,22 +25,25 @@ The refactored 2024 architecture organizes all tools into focused modules for ma
 
 ```bash
 # Build and start the server
-docker-compose up --build -d
+docker compose up --build -d
 
 # Start (after already built)
-docker-compose up -d
+docker compose up -d
 
 # Stop the server
-docker-compose down
+docker compose down
 
 # View live logs
-docker-compose logs -f
+docker compose logs -f
 
 # Full rebuild with clean volumes
-docker-compose down -v && docker-compose up --build -d
+docker compose down -v && docker compose up --build -d
 
-# Execute command in running container
+# Execute command in running container (using service name)
 docker compose exec usaspending-mcp bash
+
+# Or using container name directly
+docker exec -it usaspending-mcp-server bash
 ```
 
 
@@ -49,7 +52,7 @@ docker compose exec usaspending-mcp bash
 Four new files have been created for Docker support:
 
 1. **Dockerfile** - Multi-stage Docker build configuration with proper host binding
-2. **docker-compose.yml** - Docker Compose configuration for easy management
+2. **docker compose.yml** - Docker Compose configuration for easy management
 3. **docker-entrypoint.sh** - Entrypoint script that binds the server to 0.0.0.0 (required for Docker)
 4. **.dockerignore** - Excludes unnecessary files from the Docker build context
 
@@ -74,13 +77,13 @@ This will:
 To stop the server:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 To view logs:
 
 ```bash
-docker-compose logs -f usaspending-mcp
+docker compose logs -f usaspending-mcp
 ```
 
 ### Using Docker CLI Directly
@@ -112,7 +115,7 @@ docker rm usaspending-mcp
 
 ### Environment Variables
 
-You can set environment variables in the `docker-compose.yml` file:
+You can set environment variables in the `docker compose.yml` file:
 
 ```yaml
 environment:
@@ -123,7 +126,7 @@ environment:
 
 ### Port Mapping
 
-By default, the server runs on port 3002. If you need to use a different port, modify the `docker-compose.yml`:
+By default, the server runs on port 3002. If you need to use a different port, modify the `docker compose.yml`:
 
 ```yaml
 ports:
@@ -138,7 +141,7 @@ docker run -p YOUR_PORT:3002 usaspending-mcp:latest
 
 ### Resource Limits
 
-The docker-compose.yml includes resource limits. Adjust as needed:
+The docker compose.yml includes resource limits. Adjust as needed:
 
 ```yaml
 deploy:
@@ -173,7 +176,7 @@ volumes:
 3. Navigate to the project directory:
    ```bash
    cd /path/to/usaspending-mcp
-   docker-compose up --build
+   docker compose up --build
    ```
 4. The server will appear in the Containers list with status **Running**
 
@@ -187,7 +190,7 @@ In Docker Desktop:
 ### Stopping
 
 - In Docker Desktop, click the stop button on the container
-- Or use: `docker-compose down`
+- Or use: `docker compose down`
 
 ## Accessing the Server
 
@@ -205,7 +208,7 @@ The server implements the Model Context Protocol (MCP) and is accessible to MCP 
 curl http://localhost:3002/
 
 # View container logs (includes server startup info)
-docker-compose logs -f usaspending-mcp
+docker compose logs -f usaspending-mcp
 
 # Or with docker CLI
 docker logs -f usaspending-mcp
@@ -217,17 +220,17 @@ To actually test the MCP tools, you'll need an MCP client configured to connect 
 
 ### Container Won't Start
 
-1. Check logs: `docker-compose logs usaspending-mcp`
+1. Check logs: `docker compose logs usaspending-mcp`
 2. Verify port 3002 is not in use: `lsof -i :3002`
 3. If port is busy, either:
    - Kill the process: `kill -9 <PID>`
-   - Change the port in docker-compose.yml
+   - Change the port in docker compose.yml
 
 ### Health Check Failing
 
 The container health check verifies the server is responding on port 3002. If it fails:
 
-1. Check logs: `docker-compose logs usaspending-mcp`
+1. Check logs: `docker compose logs usaspending-mcp`
 2. Wait longer - the server may still be starting (10 second grace period)
 3. Verify the server is accessible:
    ```bash
@@ -236,7 +239,7 @@ The container health check verifies the server is responding on port 3002. If it
 4. If port 3002 is not accessible from your host, ensure:
    - Docker Desktop is running
    - Port 3002 is not blocked by a firewall
-   - Port mapping is correct in docker-compose.yml
+   - Port mapping is correct in docker compose.yml
 
 ### Docker Build Fails
 
@@ -292,7 +295,7 @@ If you modify `src/usaspending_mcp/server.py` to bind to `0.0.0.0` instead of `1
 
 ### Understanding the Modular Tools Architecture
 
-The server runs 27 tools organized into 6 focused modules:
+The server runs 32 tools organized into 6 focused modules:
 
 **In the container**, the tools are loaded and registered as follows:
 
@@ -314,7 +317,7 @@ Calls register_all_tools() from tools/__init__.py
     ├─→ conversations.register_tools()  # 4 conversation tools
     └─→ far.register_tools()        # 5 FAR regulation tools
     ↓
-All 27 tools available on http://localhost:3002
+All 32 tools available on http://localhost:3002
 ```
 
 Each tool module uses **dependency injection via closures**:
@@ -340,7 +343,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # Run the server locally
 python -m usaspending_mcp.server
@@ -354,7 +357,7 @@ python -m usaspending_mcp.server --stdio
 If you prefer Docker development, mount source code for hot reloading:
 
 ```yaml
-# In docker-compose.yml
+# In docker compose.yml
 volumes:
   - ./src:/app/src              # Live reload Python source
   - ./docs:/app/docs            # Documentation
@@ -364,8 +367,8 @@ volumes:
 Then rebuild and restart:
 
 ```bash
-docker-compose down
-docker-compose up --build -d
+docker compose down
+docker compose up --build -d
 ```
 
 ### Adding New Tools in Development
@@ -395,7 +398,7 @@ Since the refactored architecture organizes tools into modules:
 
 4. **Restart the server:**
    - **Local:** Server auto-restarts (with live reload)
-   - **Docker:** `docker-compose restart usaspending-mcp`
+   - **Docker:** `docker compose restart usaspending-mcp`
 
 For detailed tool development guide, see `docs/guides/QUICKSTART.md` or `docs/archived/JUNIOR_DEVELOPER_GUIDE.md`.
 
@@ -416,7 +419,7 @@ For production use:
 
 3. **Scaling**: Use Kubernetes or Docker Swarm for orchestration
 
-4. **Logging**: Docker logs are captured automatically. Configure log drivers in docker-compose.yml:
+4. **Logging**: Docker logs are captured automatically. Configure log drivers in docker compose.yml:
    ```yaml
    logging:
      driver: "json-file"
@@ -431,7 +434,7 @@ Remove unused Docker resources:
 
 ```bash
 # Stop and remove all containers
-docker-compose down
+docker compose down
 
 # Remove the image
 docker rmi usaspending-mcp:latest
@@ -446,11 +449,69 @@ After the container is running, you can:
 
 ### 1. Configure Claude Desktop Integration
 
-The server is now accessible at `http://localhost:3002` to any MCP client. To use with Claude Desktop:
+**IMPORTANT:** Claude Desktop connects to the Docker container via `docker exec`, not HTTP.
 
-- Install the latest Claude Desktop
-- Configure the MCP server endpoint: `http://localhost:3002`
-- All 27 tools will be available in Claude conversations
+#### Configuration Steps
+
+1. **Ensure the container is running:**
+   ```bash
+   docker ps | grep usaspending-mcp-server
+   ```
+
+2. **Locate your Claude Desktop config file:**
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+   - **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
+3. **Add this configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "usaspending": {
+         "command": "docker",
+         "args": [
+           "exec",
+           "-i",
+           "usaspending-mcp-server",
+           "python",
+           "-m",
+           "usaspending_mcp.server",
+           "--stdio"
+         ]
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Desktop:**
+   - **macOS:** Cmd+Q to quit, then reopen
+   - **Windows:** File → Exit, then reopen
+
+5. **Verify it's working:**
+   - Start a new conversation in Claude Desktop
+   - Ask: "What MCP tools do you have access to?"
+   - Claude should list all 32 USASpending tools
+
+#### Troubleshooting Claude Desktop Connection
+
+**Check Claude Desktop logs:**
+```bash
+# macOS
+tail -f ~/Library/Logs/Claude/mcp-server-usaspending.log
+
+# Windows
+type %LOCALAPPDATA%\Claude\logs\mcp-server-usaspending.log
+
+# Linux
+tail -f ~/.config/Claude/logs/mcp-server-usaspending.log
+```
+
+**Common issues:**
+- **"No such container"** - Wrong container name. Use `usaspending-mcp-server` (not `usaspending-mcp`)
+- **"Docker not found"** - Docker Desktop not running or docker command not in PATH
+- **"Permission denied"** - Docker Desktop needs to be running as your user
+
+All 32 tools will be available in Claude conversations once connected
 
 ### 2. Development & Extension
 
@@ -467,25 +528,25 @@ The refactored modular architecture makes it easy to:
 
 ```bash
 # View all logs
-docker-compose logs -f
+docker compose logs -f
 
 # View only server logs
-docker-compose logs -f usaspending-mcp
+docker compose logs -f usaspending-mcp
 
 # Tail last 100 lines
-docker-compose logs --tail=100
+docker compose logs --tail=100
 
 # Save logs to file
-docker-compose logs > server.log
+docker compose logs > server.log
 ```
 
 ### 4. Production Considerations
 
 - **Security**: Server runs as non-root user (appuser)
-- **Health checks**: Automatically configured in docker-compose.yml
-- **Resource limits**: Default 1 CPU, 512MB RAM (adjust in docker-compose.yml)
+- **Health checks**: Automatically configured in docker compose.yml
+- **Resource limits**: Default 1 CPU, 512MB RAM (adjust in docker compose.yml)
 - **Restart policy**: Set to `unless-stopped` (restart on failure)
-- **Log rotation**: Configure in docker-compose.yml to prevent disk overflow
+- **Log rotation**: Configure in docker compose.yml to prevent disk overflow
 
 ### 5. Scaling
 
@@ -493,7 +554,7 @@ For scaling the service:
 
 ```bash
 # Use multiple container instances
-docker-compose up -d --scale usaspending-mcp=3
+docker compose up -d --scale usaspending-mcp=3
 
 # Or use Kubernetes/Docker Swarm for orchestration
 # See production deployment documentation

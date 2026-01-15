@@ -180,7 +180,7 @@ def example():
 
 ```bash
 # Bash command example
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ```json

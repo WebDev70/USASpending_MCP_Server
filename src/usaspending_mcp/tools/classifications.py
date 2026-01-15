@@ -31,17 +31,22 @@ This is called "dependency injection" and is a professional pattern.
 
 import logging
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+import csv
+from io import StringIO
 
 import httpx
 from fastmcp import FastMCP
 from mcp.types import TextContent
 
 # Import utilities we need
-from usaspending_mcp.utils.logging import log_tool_execution
+from usaspending_mcp.utils.logging import log_search
 from usaspending_mcp.tools.helpers import (
     format_currency,
     make_api_request,
+    generate_award_url,
+    generate_recipient_url,
+    generate_agency_url,
 )
 
 # Module logger
@@ -57,6 +62,10 @@ def register_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all classification analysis tools with the FastMCP application.
@@ -81,18 +90,82 @@ def register_tools(
         subtier_agency_map: Dictionary mapping sub-agencies to tuples
     """
 
+    # ================================================================================
+    # HELPER FUNCTIONS AND CACHING
+    # ================================================================================
+
+    # Cache for field dictionary
+    _field_dictionary_cache = None
+    _cache_timestamp = None
+    _cache_ttl = 86400  # 24 hours in seconds
+
+    async def fetch_field_dictionary():
+        """Fetch the data dictionary from USASpending.gov API"""
+        nonlocal _field_dictionary_cache, _cache_timestamp
+
+        try:
+            current_time = datetime.now().timestamp()
+
+            # Return cached data if still valid
+            if _field_dictionary_cache is not None and _cache_timestamp is not None:
+                if (current_time - _cache_timestamp) < _cache_ttl:
+                    return _field_dictionary_cache
+
+            # Fetch fresh data dictionary
+            url = "https://api.usaspending.gov/api/v2/references/data_dictionary/"
+            resp = await http_client.get(url, timeout=30.0)
+
+            if resp.status_code == 200:
+                data = resp.json()
+
+                # Process the data dictionary to create a searchable index
+                fields = {}
+
+                if "results" in data:
+                    for item in data.get("results", []):
+                        # Create a normalized field entry
+                        field_name = item.get("element", "").lower()
+                        if field_name:
+                            fields[field_name] = {
+                                "element": item.get("element", ""),
+                                "definition": item.get("definition", ""),
+                                "data_type": item.get("data_type", ""),
+                            }
+
+                _field_dictionary_cache = fields
+                _cache_timestamp = current_time
+                return fields
+
+            return {}
+
+        except Exception as e:
+            logger_instance.error(f"Error fetching field dictionary: {e}")
+            return {}
+
+    def get_default_date_range() -> tuple[str, str]:
+        """Get 180-day lookback date range (YYYY-MM-DD format)"""
+        today = datetime.now()
+        start_date = today - timedelta(days=180)
+        return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+    # ================================================================================
+    # TOOL DEFINITIONS
+    # ================================================================================
+
     @app.tool(
         name="get_top_naics_breakdown",
         description="""Get top NAICS codes across all federal agencies with associated agencies and contractors.
 
     Returns detailed breakdown showing:
-    - Top 5 NAICS codes by award count
+    - Top 3 NAICS codes by award count
     - Agencies awarding contracts in each NAICS
     - Top contractors in each NAICS category
     - Spending amounts and percentages
 
     This provides a comprehensive view of which agencies procure from which industries
     and which contractors dominate each sector.
+
+    NOTE: Limited to top 3 NAICS codes to prevent timeout issues.
 
     DOCUMENTATION REFERENCES:
     ------------------------
@@ -102,7 +175,7 @@ def register_tools(
     - Direct Source: Census.gov/naics/
     """,
     )
-    async def get_top_naics_breakdown() -> list[TextContent]:
+    async def get_top_naics_breakdown() -> str:
         """Get top NAICS codes with agencies and contractors.
 
         DOCUMENTATION REFERENCES:
@@ -111,7 +184,7 @@ def register_tools(
         - NAICS Reference: /docs/API_RESOURCES.md → NAICS Codes Reference
         - Data Dictionary: /docs/API_RESOURCES.md → Data Dictionary"""
         output = "=" * 100 + "\n"
-        output += "TOP 5 NAICS CODES - FEDERAL AGENCIES & CONTRACTORS ANALYSIS\n"
+        output += "TOP 3 NAICS CODES - FEDERAL AGENCIES & CONTRACTORS ANALYSIS\n"
         output += "=" * 100 + "\n\n"
 
         # Get NAICS reference data
@@ -122,8 +195,9 @@ def register_tools(
                 data = resp.json()
                 naics_list = data.get("results", [])
 
-                # Sort by count
-                sorted_naics = sorted(naics_list, key=lambda x: x.get("count", 0), reverse=True)[:5]
+                # Sort by count - Reduced to top 3 to prevent client-side timeouts
+                # (Each NAICS requires an additional API call, limiting to 3 keeps total under 60s)
+                sorted_naics = sorted(naics_list, key=lambda x: x.get("count", 0), reverse=True)[:3]
 
                 total_awards = sum(n.get("count", 0) for n in naics_list)
 
@@ -147,7 +221,7 @@ def register_tools(
 
                     keyword = naics_keywords.get(code, code)
                     search_url = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
-                    # Try searching with keywords first, then fall back to broader search
+                    # Reduced limit to 25 for faster response times
                     search_payload = {
                         "filters": {"award_type_codes": ["A", "B", "C", "D"]},
                         "fields": [
@@ -158,7 +232,7 @@ def register_tools(
                             "Description",
                         ],
                         "page": 1,
-                        "limit": 50,
+                        "limit": 25,  # Reduced from 50 to prevent timeouts
                     }
 
                     try:
@@ -209,7 +283,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -243,7 +317,7 @@ def register_tools(
     - "information technology psc" → IT product/service codes
     """,
     )
-    async def get_naics_psc_info(search_term: str, code_type: str = "both") -> list[TextContent]:
+    async def get_naics_psc_info(search_term: str, code_type: str = "both") -> str:
         """Look up NAICS and PSC code information.
 
         DOCUMENTATION REFERENCES:
@@ -311,7 +385,7 @@ def register_tools(
                 output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 80 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -353,7 +427,7 @@ def register_tools(
         agency: Optional[str] = None,
         award_type: str = "contract",
         limit: int = 10,
-    ) -> list[TextContent]:
+    ) -> str:
         """Get NAICS industry trends and year-over-year analysis"""
         logger.debug(
             f"Tool call received: get_naics_trends with naics_code={naics_code}, years={years}, agency={agency}, award_type={award_type}, limit={limit}"
@@ -399,7 +473,7 @@ def register_tools(
 
                 # Add agency filter if specified
                 if agency:
-                    agency_mapping = TOPTIER_AGENCY_MAP.copy()
+                    agency_mapping = toptier_agency_map.copy()
                     agency_name = agency_mapping.get(agency.lower(), agency)
                     filters["awarding_agency_name"] = agency_name
 
@@ -413,7 +487,13 @@ def register_tools(
                     "limit": 100,  # Get more for better aggregation
                 }
 
-                result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
+                result = await make_api_request(
+                    http_client,
+                    "search/spending_by_award",
+                    base_url,
+                    json_data=payload,
+                    method="POST"
+                )
 
                 if "error" in result:
                     continue
@@ -447,7 +527,7 @@ def register_tools(
                     fiscal_year_data[naics]["years"][fy]["count"] += 1
 
             if not fiscal_year_data:
-                return [TextContent(type="text", text="No NAICS trend data found for the specified criteria.")]
+                return "No NAICS trend data found for the specified criteria."
 
             # Calculate total spending across all years for each NAICS (for sorting)
             for naics in fiscal_year_data:
@@ -509,871 +589,11 @@ def register_tools(
                 output += f"  Average per year: {format_currency(avg_per_year)}\n\n"
 
             output += "=" * 140 + "\n"
-            return [TextContent(type="text", text=output)]
+            return output
 
         except Exception as e:
             logger.error(f"Error in get_naics_trends: {str(e)}")
-            return [TextContent(type="text", text=f"Error analyzing NAICS trends: {str(e)}")]
-
-
-    async def analyze_awards_logic(args: dict) -> list[TextContent]:
-        """Analytics logic for federal spending data"""
-        # Get dynamic 180-day date range
-        start_date, end_date = get_default_date_range()
-
-        # Build filters (same as search)
-        filters = {
-            "award_type_codes": args.get("award_types", ["A", "B", "C", "D"]),
-            "time_period": [{"start_date": start_date, "end_date": end_date}],
-        }
-
-        # Only add keywords if they are provided and meet minimum length requirement (3 chars)
-        keywords = args.get("keywords")
-        # Skip keyword validation if other filters (agency, recipient) are specified
-        has_filters = args.get("toptier_agency") or args.get("subtier_agency") or args.get("recipient_name")
-
-        if keywords and keywords.strip() and keywords != "*":
-            if len(keywords.strip()) >= 3:
-                filters["keywords"] = [keywords.strip()]
-            elif not has_filters:
-                # Return error if keywords are too short and no other filters provided
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
-                    )
-                ]
-
-        # Add optional filters
-        if args.get("place_of_performance_scope"):
-            filters["place_of_performance_scope"] = args.get("place_of_performance_scope")
-
-        if args.get("recipient_name"):
-            filters["recipient_search_text"] = [args.get("recipient_name")]
-
-        if args.get("toptier_agency") or args.get("subtier_agency"):
-            filters["agencies"] = []
-            if args.get("subtier_agency"):
-                filters["agencies"].append(
-                    {
-                        "type": "awarding",
-                        "tier": "subtier",
-                        "name": args.get("subtier_agency"),
-                        "toptier_name": args.get("toptier_agency"),
-                    }
-                )
-            elif args.get("toptier_agency"):
-                filters["agencies"].append(
-                    {
-                        "type": "awarding",
-                        "tier": "toptier",
-                        "name": args.get("toptier_agency"),
-                        "toptier_name": args.get("toptier_agency"),
-                    }
-                )
-
-        if args.get("min_amount") is not None or args.get("max_amount") is not None:
-            filters["award_amount"] = {}
-            if args.get("min_amount") is not None:
-                filters["award_amount"]["lower_bound"] = int(args.get("min_amount"))
-            if args.get("max_amount") is not None:
-                filters["award_amount"]["upper_bound"] = int(args.get("max_amount"))
-
-        # Get total count
-        count_payload = {"filters": filters}
-        count_result = await make_api_request(
-            "search/spending_by_award_count", json_data=count_payload, method="POST"
-        )
-
-        if "error" in count_result:
-            return [TextContent(type="text", text=f"Error getting analytics: {count_result['error']}")]
-
-        total_count = sum(count_result.get("results", {}).values())
-
-        # Get award data for analysis
-        payload = {
-            "filters": filters,
-            "fields": ["Recipient Name", "Award Amount", "Award Type", "Description"],
-            "page": 1,
-            "limit": min(args.get("limit", 50), 100),
-        }
-
-        result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
-
-        if "error" in result:
-            return [
-                TextContent(type="text", text=f"Error fetching data for analysis: {result['error']}")
-            ]
-
-        awards = result.get("results", [])
-
-        if not awards:
-            return [TextContent(type="text", text="No awards found matching your criteria.")]
-
-        # Generate analytics
-        analytics_output = generate_spending_analytics(awards, total_count, args)
-        return [TextContent(type="text", text=analytics_output)]
-
-
-    def generate_spending_analytics(awards: list, total_count: int, args: dict) -> str:
-        """Generate comprehensive spending analytics"""
-        if not awards:
-            return "No data available for analytics."
-
-        # Calculate basic statistics
-        amounts = [float(award.get("Award Amount", 0)) for award in awards]
-        total_amount = sum(amounts)
-        avg_amount = total_amount / len(amounts) if amounts else 0
-        min_amount = min(amounts) if amounts else 0
-        max_amount = max(amounts) if amounts else 0
-
-        # Count by award type
-        award_types = {}
-        for award in awards:
-            award_type = award.get("Award Type", "Unknown")
-            award_types[award_type] = award_types.get(award_type, 0) + 1
-
-        # Top 5 recipients by spending
-        recipient_spending = {}
-        for award in awards:
-            recipient = award.get("Recipient Name", "Unknown")
-            amount = float(award.get("Award Amount", 0))
-            recipient_spending[recipient] = recipient_spending.get(recipient, 0) + amount
-
-        top_recipients = sorted(recipient_spending.items(), key=lambda x: x[1], reverse=True)[:5]
-
-        # Spending distribution by ranges
-        ranges = {
-            "< $100K": 0,
-            "$100K - $1M": 0,
-            "$1M - $10M": 0,
-            "$10M - $50M": 0,
-            "$50M - $100M": 0,
-            "$100M - $500M": 0,
-            "> $500M": 0,
-        }
-
-        for amount in amounts:
-            if amount < 100_000:
-                ranges["< $100K"] += 1
-            elif amount < 1_000_000:
-                ranges["$100K - $1M"] += 1
-            elif amount < 10_000_000:
-                ranges["$1M - $10M"] += 1
-            elif amount < 50_000_000:
-                ranges["$10M - $50M"] += 1
-            elif amount < 100_000_000:
-                ranges["$50M - $100M"] += 1
-            elif amount < 500_000_000:
-                ranges["$100M - $500M"] += 1
-            else:
-                ranges["> $500M"] += 1
-
-        # Build output
-        output = "=" * 80 + "\n"
-        output += "FEDERAL SPENDING ANALYTICS\n"
-        output += "=" * 80 + "\n\n"
-
-        # Summary statistics
-        output += "SUMMARY STATISTICS\n"
-        output += "-" * 80 + "\n"
-        output += f"Total Awards Found: {total_count:,}\n"
-        output += f"Awards in Sample: {len(awards):,}\n"
-        output += f"Total Spending: {format_currency(total_amount)}\n"
-        output += f"Average Award Size: {format_currency(avg_amount)}\n"
-        output += f"Minimum Award: {format_currency(min_amount)}\n"
-        output += f"Maximum Award: {format_currency(max_amount)}\n"
-        output += (
-            f"Median Award: {format_currency(sorted(amounts)[len(amounts)//2] if amounts else 0)}\n\n"
-        )
-
-        # Awards by type
-        output += "AWARDS BY TYPE\n"
-        output += "-" * 80 + "\n"
-        for award_type, count in sorted(award_types.items(), key=lambda x: x[1], reverse=True):
-            pct = (count / len(awards) * 100) if awards else 0
-            output += f"{award_type or 'Unknown'}: {count} awards ({pct:.1f}%)\n"
-        output += "\n"
-
-        # Top recipients
-        output += "TOP 5 RECIPIENTS\n"
-        output += "-" * 80 + "\n"
-        for i, (recipient, amount) in enumerate(top_recipients, 1):
-            pct = (amount / total_amount * 100) if total_amount else 0
-            output += f"{i}. {recipient}\n"
-            output += f"   Spending: {format_currency(amount)} ({pct:.1f}% of total)\n"
-        output += "\n"
-
-        # Spending distribution
-        output += "SPENDING DISTRIBUTION BY AWARD SIZE\n"
-        output += "-" * 80 + "\n"
-        for range_label, count in ranges.items():
-            if count > 0:
-                pct = count / len(awards) * 100
-                bar_length = int(pct / 2)  # Scale to fit
-                bar = "█" * bar_length
-                output += f"{range_label:20} {count:4} awards ({pct:5.1f}%) {bar}\n"
-        output += "\n"
-
-        # Key insights
-        output += "KEY INSIGHTS\n"
-        output += "-" * 80 + "\n"
-
-        # Find largest award
-        largest_award = max(awards, key=lambda x: float(x.get("Award Amount", 0)))
-        output += f"Largest Award: {format_currency(float(largest_award['Award Amount']))} to {largest_award['Recipient Name']}\n"
-
-        # Find most common recipient
-        most_common = max(recipient_spending.items(), key=lambda x: x[1])
-        output += f"Largest Recipient: {most_common[0]} with {format_currency(most_common[1])}\n"
-
-        # Top spending range
-        top_range = max(ranges.items(), key=lambda x: x[1])
-        output += f"Most Common Award Size: {top_range[0]} ({top_range[1]} awards)\n"
-
-        # Concentration analysis
-        top_5_pct = (
-            (sum([amount for _, amount in top_recipients]) / total_amount * 100) if total_amount else 0
-        )
-        output += f"Top 5 Recipients Control: {top_5_pct:.1f}% of total spending\n"
-
-        output += "\n" + "=" * 80 + "\n"
-
-        # Log successful analytics query for analytics
-        log_search(
-            tool_name="analyze_federal_spending",
-            query=args.get("keywords", ""),
-            results_count=total_count,
-            filters={
-                "award_types": args.get("award_types"),
-                "min_amount": args.get("min_amount"),
-                "max_amount": args.get("max_amount"),
-                "agency": args.get("toptier_agency") or args.get("subtier_agency"),
-            },
-        )
-
-        return [TextContent(type="text", text=output)]
-
-
-    async def search_awards_logic(args: dict) -> list[TextContent]:
-        # Get date range from args or use default (180-day lookback)
-        start_date = args.get("start_date")
-        end_date = args.get("end_date")
-
-        if start_date is None or end_date is None:
-            start_date, end_date = get_default_date_range()
-
-        # Build filters based on arguments
-        filters = {
-            "award_type_codes": args.get("award_types", ["A", "B", "C", "D"]),
-            "time_period": [{"start_date": start_date, "end_date": end_date}],
-        }
-
-        # Only add keywords if they are provided and meet minimum length requirement (3 chars)
-        keywords = args.get("keywords")
-        # Skip keyword validation if other filters (agency, recipient) are specified
-        has_filters = args.get("toptier_agency") or args.get("subtier_agency") or args.get("recipient_name")
-
-        if keywords and keywords.strip() and keywords != "*":
-            if len(keywords.strip()) >= 3:
-                filters["keywords"] = [keywords.strip()]
-            elif not has_filters:
-                # Return error if keywords are too short and no other filters provided
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"Error: Search keywords must be at least 3 characters. You provided '{keywords}'",
-                    )
-                ]
-
-        # Add place of performance scope filter if specified (domestic/foreign)
-        if args.get("place_of_performance_scope"):
-            filters["place_of_performance_scope"] = args.get("place_of_performance_scope")
-
-        # Add recipient search filter if specified
-        if args.get("recipient_name"):
-            filters["recipient_search_text"] = [args.get("recipient_name")]
-
-        # Add agency filters if specified
-        if args.get("toptier_agency") or args.get("subtier_agency"):
-            filters["agencies"] = []
-
-            # If subtier is specified, only include the subtier filter (it implicitly filters by parent toptier)
-            if args.get("subtier_agency"):
-                subtier_agency = args.get("subtier_agency")
-                toptier_agency = args.get("toptier_agency")
-                filters["agencies"].append(
-                    {
-                        "type": "awarding",
-                        "tier": "subtier",
-                        "name": subtier_agency,
-                        "toptier_name": toptier_agency,
-                    }
-                )
-            # Otherwise, if only toptier is specified, add the toptier filter
-            elif args.get("toptier_agency"):
-                toptier_agency = args.get("toptier_agency")
-                filters["agencies"].append(
-                    {
-                        "type": "awarding",
-                        "tier": "toptier",
-                        "name": toptier_agency,
-                        "toptier_name": toptier_agency,
-                    }
-                )
-
-        # Add award amount filters if specified
-        if args.get("min_amount") is not None or args.get("max_amount") is not None:
-            filters["award_amount"] = {}
-            if args.get("min_amount") is not None:
-                filters["award_amount"]["lower_bound"] = int(args.get("min_amount"))
-            if args.get("max_amount") is not None:
-                filters["award_amount"]["upper_bound"] = int(args.get("max_amount"))
-
-        # Add set-aside type filter if specified
-        if args.get("set_aside_type"):
-            set_aside = args.get("set_aside_type").upper().strip()
-            # Support multiple formats for common set-aside types
-            set_aside_mapping = {
-                "SDVOSB": ["SDVOSBC", "SDVOSBS"],  # Both competed and sole source
-                "WOSB": ["WOSB", "EDWOSB"],  # Both WOSB and EDWOSB
-                "VETERAN": ["VSA", "VSS"],  # Both veteran competed and sole source
-                "HUBZONE": ["HZC", "HZS"],  # Both HUBZone competed and sole source
-                "SMALL_BUSINESS": ["SBA", "SBP"],  # Both total and partial SB set-aside
-            }
-
-            if set_aside in set_aside_mapping:
-                filters["type_set_aside"] = set_aside_mapping[set_aside]
-            else:
-                # Use the code directly if it's not in the mapping
-                filters["type_set_aside"] = [set_aside]
-
-        # First, get the count
-        count_payload = {"filters": filters}
-        count_result = await make_api_request(
-            "search/spending_by_award_count", json_data=count_payload, method="POST"
-        )
-
-        if "error" in count_result:
-            error_msg = count_result["error"]
-            help_text = "\n\nTROUBLESHOOTING TIPS:\n"
-            help_text += "- Check if set-aside type code is valid: See /docs/API_RESOURCES.md → Set-Asides Reference\n"
-            help_text += "- Verify agency name format: See /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
-            help_text += (
-                "- Check award type codes: See /docs/API_RESOURCES.md → Award Types Reference\n"
-            )
-            help_text += "- See complete field definitions: /docs/API_RESOURCES.md → Data Dictionary"
-            return [TextContent(type="text", text=f"Error getting count: {error_msg}{help_text}")]
-
-        total_count = sum(count_result.get("results", {}).values())
-
-        # Then get the actual results
-        payload = {
-            "filters": filters,
-            "fields": [
-                "Award ID",
-                "Recipient Name",
-                "Award Amount",
-                "Description",
-                "Award Type",
-                "generated_internal_id",
-                "recipient_hash",
-                "awarding_agency_name",
-                "NAICS Code",
-                "NAICS Description",
-                "PSC Code",
-                "PSC Description",
-            ],
-            "page": 1,
-            "limit": min(args.get("limit", 10), 100),
-        }
-
-        # Make the API request for results
-        result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
-
-        if "error" in result:
-            error_msg = result["error"]
-            help_text = "\n\nTROUBLESHOOTING TIPS:\n"
-            help_text += "- Verify all filter values are valid\n"
-            help_text += "- Check set-aside codes: /docs/API_RESOURCES.md → Set-Asides Reference\n"
-            help_text += "- Check agency names: /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
-            help_text += "- Check award types: /docs/API_RESOURCES.md → Award Types Reference\n"
-            help_text += "- Check NAICS codes: /docs/API_RESOURCES.md → NAICS Codes Reference\n"
-            help_text += "- Check PSC codes: /docs/API_RESOURCES.md → PSC Codes Reference"
-            return [TextContent(type="text", text=f"Error fetching results: {error_msg}{help_text}")]
-
-        # Process the results
-        awards = result.get("results", [])
-        page_metadata = result.get("page_metadata", {})
-        current_page = page_metadata.get("page", 1)
-        has_next = page_metadata.get("hasNext", False)
-
-        if not awards:
-            help_text = "No awards found matching your criteria.\n\n"
-            help_text += "SUGGESTIONS:\n"
-            help_text += "- Try broader search terms or remove filters\n"
-            help_text += "- Verify filter values are correct:\n"
-            help_text += "  • Set-aside codes: /docs/API_RESOURCES.md → Set-Asides Reference\n"
-            help_text += "  • Agency names: /docs/API_RESOURCES.md → Top-Tier Agencies Reference\n"
-            help_text += "  • Award types: /docs/API_RESOURCES.md → Award Types Reference\n"
-            help_text += "- Check date range - data may be limited for future dates\n"
-            help_text += "- Consult /docs/API_RESOURCES.md for complete reference information"
-            return [TextContent(type="text", text=help_text)]
-
-        # Filter by excluded keywords and amount range if needed
-        exclude_keywords = args.get("exclude_keywords", [])
-        min_amount = args.get("min_amount")
-        max_amount = args.get("max_amount")
-
-        filtered_awards = []
-        for award in awards:
-            # Check excluded keywords
-            description = award.get("Description", "").lower()
-            recipient = award.get("Recipient Name", "").lower()
-
-            excluded = any(
-                keyword.lower() in description or keyword.lower() in recipient
-                for keyword in exclude_keywords
-            )
-            if excluded:
-                continue
-
-            # Check amount range (additional client-side filtering)
-            amount = float(award.get("Award Amount", 0))
-            if min_amount is not None and amount < min_amount:
-                continue
-            if max_amount is not None and amount > max_amount:
-                continue
-
-            filtered_awards.append(award)
-
-        if not filtered_awards:
-            help_text = "No awards found matching your criteria after applying filters.\n\n"
-            help_text += "SUGGESTIONS:\n"
-            help_text += "- Try removing some filter conditions\n"
-            help_text += "- Check that excluded keywords are not too broad\n"
-            help_text += "- Verify amount range is not too restrictive\n"
-            help_text += "- Check date range contains available data\n"
-            help_text += "- If using custom filters, verify against:\n"
-            help_text += "  • /docs/API_RESOURCES.md → Data Dictionary (field definitions)\n"
-            help_text += "  • /docs/API_RESOURCES.md → Glossary (term definitions)"
-            return [TextContent(type="text", text=help_text)]
-
-        # Handle different output formats
-        output_format = args.get("output_format", "text")
-
-        # Extract options for result refinement
-        sort_by_relevance = args.get("sort_by_relevance", False)
-        include_explanations = args.get("include_explanations", True)
-        aggregate_results = args.get("aggregate_results", False)
-
-        # Extract keywords for explanations and context
-        query_keywords = args.get("keywords", "").split() if args.get("keywords") else []
-
-        # Apply relevance scoring and sorting if requested
-        if sort_by_relevance and query_keywords:
-            filtered_awards = relevance_scorer.sort_by_relevance(
-                filtered_awards,
-                query_keywords,
-                context=None
-            )
-
-        if output_format == "csv":
-            # Generate CSV output
-            output = format_awards_as_csv(filtered_awards, total_count, current_page, has_next)
-        else:
-            # Generate text output (default)
-            if include_explanations and query_keywords:
-                # Use format with explanations
-                output = result_aggregator.format_awards_with_explanations(
-                    filtered_awards,
-                    query_keywords,
-                    total_count,
-                    current_page,
-                    has_next
-                )
-            else:
-                # Use standard format
-                output = format_awards_as_text(filtered_awards, total_count, current_page, has_next)
-
-        # Add progressive filtering suggestions for large result sets
-        if total_count > 50:
-            # Try to extract conversation context
-            try:
-                conversation_records = conversation_logger.get_conversation(
-                    conversation_id=args.get("conversation_id", ""),
-                    user_id="anonymous"
-                )
-                context = query_context_analyzer.extract_filters_from_conversation(conversation_records)
-                suggestion = query_context_analyzer.suggest_refinement_filters(total_count, context)
-                if suggestion:
-                    output += suggestion
-            except Exception as e:
-                logger.debug(f"Could not extract conversation context: {e}")
-
-        # Add aggregation summary if requested
-        if aggregate_results and len(filtered_awards) > 3:
-            try:
-                aggregation_summary = result_aggregator.generate_aggregated_summary(
-                    filtered_awards,
-                    aggregation_type="recipient",
-                    limit=5
-                )
-                output += "\n\n" + aggregation_summary
-            except Exception as e:
-                logger.debug(f"Could not generate aggregation summary: {e}")
-
-        # Log successful search for analytics
-        log_search(
-            tool_name="search_federal_awards",
-            query=args.get("keywords", ""),
-            results_count=len(filtered_awards),
-            filters={
-                "award_types": args.get("award_types"),
-                "min_amount": args.get("min_amount"),
-                "max_amount": args.get("max_amount"),
-                "agency": args.get("toptier_agency") or args.get("subtier_agency"),
-                "output_format": output_format,
-            },
-        )
-
-        return [TextContent(type="text", text=output)]
-
-
-    def format_awards_as_text(awards: list, total_count: int, current_page: int, has_next: bool) -> str:
-        """Format awards as plain text output"""
-        output = (
-            f"Found {total_count} total matches (showing {len(awards)} on page {current_page}):\n\n"
-        )
-
-        for i, award in enumerate(awards, 1):
-            recipient = award.get("Recipient Name", "Unknown Recipient")
-            award_id = award.get("Award ID", "N/A")
-            amount = float(award.get("Award Amount", 0))
-            award_type = award.get("Award Type", "Unknown")
-            description = award.get("Description", "")
-            internal_id = award.get("generated_internal_id", "")
-            naics_code = award.get("NAICS Code", "")
-            naics_desc = award.get("NAICS Description", "")
-            psc_code = award.get("PSC Code", "")
-            psc_desc = award.get("PSC Description", "")
-            recipient_hash = award.get("recipient_hash", "")
-            awarding_agency = award.get("awarding_agency_name", "")
-
-            output += f"{i}. {recipient}\n"
-            output += f"   Award ID: {award_id}\n"
-            output += f"   Amount: {format_currency(amount)}\n"
-            output += f"   Type: {award_type}\n"
-            # Add NAICS code and description
-            if naics_code:
-                output += f"   NAICS Code: {naics_code}"
-                if naics_desc:
-                    output += f" ({naics_desc})"
-                output += "\n"
-            # Add PSC code and description
-            if psc_code:
-                output += f"   PSC Code: {psc_code}"
-                if psc_desc:
-                    output += f" ({psc_desc})"
-                output += "\n"
-            if description:
-                desc = description[:150]
-                output += f"   Description: {desc}{'...' if len(description) > 150 else ''}\n"
-
-            # Add USASpending.gov Links
-            output += "   Links:\n"
-            # Award link
-            if internal_id:
-                award_url = generate_award_url(internal_id)
-                output += f"      • Award: {award_url}\n"
-            # Recipient profile link
-            if recipient_hash:
-                recipient_url = generate_recipient_url(recipient_hash)
-                output += f"      • Recipient Profile: {recipient_url}\n"
-            # Agency profile link
-            if awarding_agency:
-                agency_url = generate_agency_url(awarding_agency)
-                output += f"      • Awarding Agency: {agency_url}\n"
-            output += "\n"
-
-        # Add pagination info
-        output += f"--- Page {current_page}"
-        if has_next:
-            output += " | More results available (use max_results for more) ---\n"
-        else:
-            output += " (Last page) ---\n"
-
-        return output
-
-
-    def format_awards_as_csv(awards: list, total_count: int, current_page: int, has_next: bool) -> str:
-        """Format awards as CSV output"""
-        output = StringIO()
-        writer = csv.writer(output)
-
-        # Write header
-        writer.writerow(
-            [
-                "Recipient Name",
-                "Award ID",
-                "Amount ($)",
-                "Award Type",
-                "NAICS Code",
-                "NAICS Description",
-                "PSC Code",
-                "PSC Description",
-                "Description",
-                "Award URL",
-                "Recipient Profile URL",
-                "Agency URL",
-            ]
-        )
-
-        # Write data rows
-        for award in awards:
-            recipient = award.get("Recipient Name", "Unknown Recipient")
-            award_id = award.get("Award ID", "N/A")
-            amount = float(award.get("Award Amount", 0))
-            award_type = award.get("Award Type", "Unknown")
-            naics_code = award.get("NAICS Code", "")
-            naics_desc = award.get("NAICS Description", "")
-            psc_code = award.get("PSC Code", "")
-            psc_desc = award.get("PSC Description", "")
-            description = award.get("Description", "")[:200]  # Limit description length
-            internal_id = award.get("generated_internal_id", "")
-            recipient_hash = award.get("recipient_hash", "")
-            awarding_agency = award.get("awarding_agency_name", "")
-
-            # Generate URLs
-            award_url = generate_award_url(internal_id)
-            recipient_url = generate_recipient_url(recipient_hash)
-            agency_url = generate_agency_url(awarding_agency)
-
-            writer.writerow(
-                [
-                    recipient,
-                    award_id,
-                    amount,
-                    award_type,
-                    naics_code,
-                    naics_desc,
-                    psc_code,
-                    psc_desc,
-                    description,
-                    award_url,
-                    recipient_url,
-                    agency_url,
-                ]
-            )
-
-        csv_output = output.getvalue()
-        output.close()
-
-        # Add summary footer
-        summary = f"\n\n# Summary: Found {total_count} total matches, showing {len(awards)} on page {current_page}"
-        if has_next:
-            summary += " (more results available)"
-        summary += "\n"
-
-        return csv_output + summary
-
-
-    # ================================================================================
-    # PHASE 1: HIGH-IMPACT ENHANCEMENT TOOLS
-    # ================================================================================
-
-
-
-    @app.tool(
-        name="get_object_class_analysis",
-        description="""Analyze federal spending by object class (type of spending).
-
-    Object class categories:
-    - 10: Personnel compensation
-    - 20: Contractual services
-    - 30: Supplies and materials
-    - 40: Equipment
-    - 41-45: Grants, subsidies, insurance
-    - 90: Other
-
-    PARAMETERS:
-    -----------
-    - agency (optional): Filter by agency (e.g., "dod", "hhs")
-    - fiscal_year (optional): Specific fiscal year to analyze
-
-    EXAMPLES:
-    ---------
-    - "get_object_class_analysis" → Overall federal spending by object class
-    - "get_object_class_analysis agency:dod" → DOD spending by object class
-    - "get_object_class_analysis fiscal_year:2024" → 2024 spending analysis
-    """,
-    )
-    async def get_object_class_analysis(
-        agency: Optional[str] = None, fiscal_year: Optional[str] = None
-    ) -> list[TextContent]:
-        """Analyze spending by object class"""
-        output = "=" * 100 + "\n"
-        output += "FEDERAL SPENDING BY OBJECT CLASS\n"
-        output += "=" * 100 + "\n\n"
-
-        try:
-            object_classes = {
-                "10": "Personnel Compensation (11-15)",
-                "20": "Contractual Services (21-25)",
-                "30": "Supplies and Materials (31-35)",
-                "40": "Equipment (41-45)",
-                "90": "Grants, Subsidies, and Insurance (91-99)",
-                "99": "Other/Miscellaneous",
-            }
-
-            output += "Object Class Categories:\n"
-            output += "-" * 100 + "\n"
-            for code, desc in sorted(object_classes.items()):
-                output += f"  {code}xx: {desc}\n"
-
-            output += "\nSpending Distribution by Object Class (typical federal allocation):\n"
-            output += "-" * 100 + "\n"
-            output += "  Personnel:                ~35% (salaries, benefits)\n"
-            output += "  Contractual Services:     ~30% (contractors, consultants)\n"
-            output += "  Supplies & Materials:     ~15% (office supplies, equipment parts)\n"
-            output += "  Equipment:                ~10% (vehicles, IT hardware)\n"
-            output += "  Grants & Subsidies:       ~10% (payments to individuals/entities)\n"
-
-            output += "\nFor detailed object class analysis by agency,\n"
-            output += "visit: https://www.usaspending.gov/\n"
-
-        except Exception as e:
-            output += f"Error: {str(e)}\n"
-
-        output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
-
-
-    # ================================================================================
-    # PHASE 3: SPECIALIZED ANALYSIS TOOLS
-    # ================================================================================
-
-
-
-    @app.tool(
-        name="get_field_documentation",
-        description="""Get documentation for available data fields in USASpending.gov.
-
-    Provides comprehensive field definitions, mappings, and usage information for federal spending data.
-    Useful for understanding what data is available and how to search for specific information.
-
-    PARAMETERS:
-    -----------
-    - search_term (optional): Search for specific fields (e.g., "award", "agency", "vendor")
-    - show_all (optional): "true" to show all 412 fields, "false" for summary (default: false)
-
-    RETURNS:
-    --------
-    - Field definitions with element names, descriptions, and file mappings
-    - Suggested searchable fields for use with search_federal_awards
-    - Mapping information for different data types (contracts, grants, subawards)
-
-    EXAMPLES:
-    ---------
-    - get_field_documentation(search_term="award") → Fields related to awards
-    - get_field_documentation(search_term="agency") → Agency-related fields
-    - get_field_documentation(show_all="true") → Complete field list (412 fields)
-    - get_field_documentation() → Summary of key searchable fields
-    """,
-    )
-    async def get_field_documentation(
-        search_term: Optional[str] = None, show_all: str = "false"
-    ) -> list[TextContent]:
-        """Get documentation for available data fields in USASpending.gov"""
-
-        output = "=" * 100 + "\n"
-        output += "USASpending.gov FIELD DOCUMENTATION\n"
-        output += "=" * 100 + "\n\n"
-
-        try:
-            # Fetch the data dictionary
-            fields = await fetch_field_dictionary()
-
-            if not fields:
-                output += "Unable to load field documentation. Please try again later.\n"
-                return [TextContent(type="text", text=output)]
-
-            # Filter fields based on search term if provided
-            if search_term:
-                search_lower = search_term.lower()
-                filtered = {
-                    k: v
-                    for k, v in fields.items()
-                    if search_lower in k or search_lower in v.get("definition", "").lower()
-                }
-                output += f"FIELDS MATCHING '{search_term}' ({len(filtered)} results):\n"
-                output += "-" * 100 + "\n\n"
-            else:
-                filtered = fields
-                if show_all.lower() != "true":
-                    # Show only key searchable fields
-                    key_fields = [
-                        "award id",
-                        "recipient name",
-                        "award amount",
-                        "awarding agency",
-                        "award date",
-                        "award type",
-                        "contract number",
-                        "grant number",
-                        "naics code",
-                        "psc code",
-                        "base and all options value",
-                        "action date",
-                        "period of performance start",
-                        "period of performance end",
-                    ]
-                    filtered = {k: v for k, v in fields.items() if any(key in k for key in key_fields)}
-                    output += f"KEY SEARCHABLE FIELDS ({len(filtered)} of {len(fields)} total):\n"
-                else:
-                    output += f"ALL AVAILABLE FIELDS ({len(fields)} total):\n"
-                output += "-" * 100 + "\n\n"
-
-            # Display field documentation
-            if filtered:
-                for field_name, field_info in sorted(filtered.items()):
-                    output += f"📋 {field_info['element']}\n"
-                    output += f"   Field Name: {field_name}\n"
-
-                    if field_info.get("definition"):
-                        output += f"   Definition: {field_info['definition']}\n"
-
-                    if field_info.get("award_element"):
-                        output += f"   Award Field: {field_info['award_element']}\n"
-
-                    if field_info.get("subaward_element"):
-                        output += f"   Subaward Field: {field_info['subaward_element']}\n"
-
-                    if field_info.get("fpds_element"):
-                        output += f"   FPDS Mapping: {field_info['fpds_element']}\n"
-
-                    output += "\n"
-            else:
-                output += f"No fields found matching '{search_term}'\n"
-
-            # Add usage hints
-            output += "-" * 100 + "\n"
-            output += "USAGE HINTS:\n"
-            output += "-" * 100 + "\n"
-            output += "• Use field names as search terms in search_federal_awards()\n"
-            output += "• Common filters: agency, award_type, award_amount, recipient_name\n"
-            output += (
-                "• Date fields: action_date, period_of_performance_start, period_of_performance_end\n"
-            )
-            output += "• Classification fields: naics_code, psc_code, contract_number\n"
-
-            output += "\n" + "=" * 100 + "\n"
-
-        except Exception as e:
-            output += f"Error: {str(e)}\n"
-            output += "\n" + "=" * 100 + "\n"
-
-        return [TextContent(type="text", text=output)]
+            return f"Error analyzing NAICS trends: {str(e)}"
 
 
     # ==================== TIER 1: HIGH-IMPACT ENDPOINTS ====================

@@ -65,6 +65,10 @@ def register_tools(
     award_type_map: dict,
     toptier_agency_map: dict,
     subtier_agency_map: dict,
+    conversation_logger,
+    query_context_analyzer,
+    result_aggregator,
+    relevance_scorer,
 ) -> None:
     """
     Register all award-related tools with the FastMCP application.
@@ -125,7 +129,7 @@ def register_tools(
     """,
     )
     @log_tool_execution
-    async def get_award_by_id(award_id: str) -> list[TextContent]:
+    async def get_award_by_id(award_id: str) -> str:
         """Get a specific award by Award ID"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Search for the specific award ID
@@ -194,7 +198,7 @@ def register_tools(
                         agency_url = generate_agency_url(awarding_agency)
                         output += f"  • Awarding Agency: {agency_url}\n"
 
-                    return [TextContent(type="text", text=output)]
+                    return output
                 else:
                     return [
                         TextContent(
@@ -204,7 +208,7 @@ def register_tools(
                     ]
 
             except Exception as e:
-                return [TextContent(type="text", text=f"Error retrieving award: {str(e)}")]
+                return f"Error retrieving award: {str(e)}"
 
 
 
@@ -274,13 +278,15 @@ def register_tools(
         aggregate_results: bool = False,
         sort_by_relevance: bool = False,
         include_explanations: bool = True,
-    ) -> list[TextContent]:
+        sort_by_date: bool = False,
+    ) -> str:
         """Search for federal awards with advanced query syntax, optional date range, and set-aside filters.
 
         ADVANCED RESULT REFINEMENT OPTIONS:
         ===================================
         - aggregate_results: Group similar awards by recipient and show summaries (default: False)
         - sort_by_relevance: Rank results by relevance to query keywords (default: False)
+        - sort_by_date: Sort results by award date, most recent first (default: False)
         - include_explanations: Show why each award matched the query (default: True)
 
         DOCUMENTATION REFERENCES:
@@ -303,7 +309,7 @@ def register_tools(
         - search_federal_awards("IT contracts", sort_by_relevance=True)
         - search_federal_awards("cloud services", aggregate_results=True)"""
         logger.debug(
-            f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}, set_aside_type={set_aside_type}"
+            f"Tool call received: search_federal_awards with query='{query}', max_results={max_results}, output_format={output_format}, start_date={start_date}, end_date={end_date}, set_aside_type={set_aside_type}, sort_by_date={sort_by_date}"
         )
 
         # Validate output format
@@ -314,8 +320,11 @@ def register_tools(
         if max_results < 1 or max_results > 100:
             max_results = 5
 
-        # Get the date range (use provided dates or default)
-        actual_start_date, actual_end_date = get_date_range(start_date, end_date)
+        # Get the date range (use provided dates or default to 180-day lookback)
+        if start_date is None or end_date is None:
+            actual_start_date, actual_end_date = get_default_date_range()
+        else:
+            actual_start_date, actual_end_date = start_date, end_date
 
         # Parse the query for advanced features
         parser = QueryParser(query, award_type_map, toptier_agency_map, subtier_agency_map)
@@ -339,6 +348,7 @@ def register_tools(
                 "aggregate_results": aggregate_results,
                 "sort_by_relevance": sort_by_relevance,
                 "include_explanations": include_explanations,
+                "sort_by_date": sort_by_date,
             }
         )
 
@@ -373,7 +383,7 @@ def register_tools(
     - get_award_details("W91QF425PA017") → James B Studdard moving services details
     """,
     )
-    async def get_award_details(award_id: str) -> list[TextContent]:
+    async def get_award_details(award_id: str) -> str:
         """Get comprehensive details for a specific award"""
 
         output = "=" * 100 + "\n"
@@ -445,7 +455,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -478,7 +488,7 @@ def register_tools(
     )
     async def get_subaward_data(
         award_id: Optional[str] = None, max_results: int = 10
-    ) -> list[TextContent]:
+    ) -> str:
         """Find subawards and subcontractors"""
 
         output = "=" * 100 + "\n"
@@ -493,7 +503,7 @@ def register_tools(
                 output += "Error: award_id parameter is required to search for subawards.\n"
                 output += "Please provide a valid award ID (e.g., '47QSWA26P02KE')\n"
                 output += "=" * 100 + "\n"
-                return [TextContent(type="text", text=output)]
+                return output
 
             output += f"Searching for subawards under award: {award_id}\n\n"
 
@@ -531,7 +541,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -569,7 +579,7 @@ def register_tools(
         recipient_id: Optional[str] = None,
         recipient_name: Optional[str] = None,
         detail_level: str = "detail",
-    ) -> list[TextContent]:
+    ) -> str:
         """Get comprehensive recipient/vendor profiles"""
 
         output = "=" * 100 + "\n"
@@ -593,10 +603,10 @@ def register_tools(
                         output += f"Found: {recipient_name} (ID: {recipient_id})\n\n"
                     else:
                         output += f"No recipient found matching '{recipient_name}'\n"
-                        return [TextContent(type="text", text=output)]
+                        return output
                 else:
                     output += "Error searching for recipient\n"
-                    return [TextContent(type="text", text=output)]
+                    return output
 
             # Get recipient profile
             url = "https://api.usaspending.gov/api/v2/recipients/"
@@ -650,7 +660,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -684,7 +694,7 @@ def register_tools(
     The tool also returns awards using spending_by_award endpoint with UEI keyword filter.
     """,
     )
-    async def get_vendor_by_uei(uei: str, limit: int = 100) -> list[TextContent]:
+    async def get_vendor_by_uei(uei: str, limit: int = 100) -> str:
         """Search for contractor awards by UEI (Unique Entity Identifier)"""
 
         output = "=" * 100 + "\n"
@@ -693,7 +703,7 @@ def register_tools(
 
         if not uei or len(uei.strip()) == 0:
             output += "Error: UEI parameter is required\n"
-            return [TextContent(type="text", text=output)]
+            return output
 
         try:
             # Search for awards by UEI (using keyword search with award type filter)
@@ -727,7 +737,7 @@ def register_tools(
                     output += "- The vendor has no recent federal awards\n"
                     output += "- Try searching by vendor name instead\n"
                     output += "=" * 100 + "\n"
-                    return [TextContent(type="text", text=output)]
+                    return output
 
                 # Extract vendor information
                 vendor_name = results[0].get("Recipient Name", "Unknown")
@@ -825,7 +835,7 @@ def register_tools(
             output += f"Error: {str(e)}\n"
 
         output += "\n" + "=" * 100 + "\n"
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 
@@ -849,6 +859,7 @@ def register_tools(
             award_type = award.get("Award Type", "Unknown")
             description = award.get("Description", "")
             internal_id = award.get("generated_internal_id", "")
+            start_date = award.get("Start Date", "")
             naics_code = award.get("NAICS Code", "")
             naics_desc = award.get("NAICS Description", "")
             psc_code = award.get("PSC Code", "")
@@ -860,6 +871,8 @@ def register_tools(
             output += f"   Award ID: {award_id}\n"
             output += f"   Amount: {format_currency(amount)}\n"
             output += f"   Type: {award_type}\n"
+            if start_date:
+                output += f"   Start Date: {start_date}\n"
             # Add NAICS code and description
             if naics_code:
                 output += f"   NAICS Code: {naics_code}"
@@ -976,36 +989,10 @@ def register_tools(
 
 
     # ================================================================================
-    # PHASE 1: HIGH-IMPACT ENHANCEMENT TOOLS
+    # HELPER FUNCTIONS (Not tools - just internal utilities)
     # ================================================================================
 
-
-    @app.tool(
-        name="get_spending_by_state",
-        description="""Analyze federal spending by state and territory.
-
-    Returns spending breakdown by:
-    - State/territory name
-    - Total awards count
-    - Total spending amount
-    - Top contractors in each state
-    - Top agencies awarding in each state
-
-    PARAMETERS:
-    -----------
-    - state (optional): Specific state to analyze (e.g., "California", "Texas")
-    - top_n (optional): Show top N states (default: 10)
-    - min_spending (optional): Filter states with minimum spending (e.g., "10M")
-
-    EXAMPLES:
-    ---------
-    - "get_spending_by_state" → Top 10 states by federal spending
-    - "get_spending_by_state state:California" → California federal spending detail
-    - "get_spending_by_state top_n:20" → Top 20 states ranked by spending
-    """,
-    )
-
-    async def search_awards_logic(args: dict) -> list[TextContent]:
+    async def search_awards_logic(args: dict) -> str:
         # Get date range from args or use default (180-day lookback)
         start_date = args.get("start_date")
         end_date = args.get("end_date")
@@ -1085,6 +1072,7 @@ def register_tools(
             set_aside = args.get("set_aside_type").upper().strip()
             # Support multiple formats for common set-aside types
             set_aside_mapping = {
+                "8A": ["8A", "8AN", "8ANC", "8ANS"],  # 8(a) and 8(a) Native American variants
                 "SDVOSB": ["SDVOSBC", "SDVOSBS"],  # Both competed and sole source
                 "WOSB": ["WOSB", "EDWOSB"],  # Both WOSB and EDWOSB
                 "VETERAN": ["VSA", "VSS"],  # Both veteran competed and sole source
@@ -1101,7 +1089,11 @@ def register_tools(
         # First, get the count
         count_payload = {"filters": filters}
         count_result = await make_api_request(
-            "search/spending_by_award_count", json_data=count_payload, method="POST"
+            http_client,
+            "search/spending_by_award_count",
+            base_url,
+            json_data=count_payload,
+            method="POST"
         )
 
         if "error" in count_result:
@@ -1113,7 +1105,7 @@ def register_tools(
                 "- Check award type codes: See /docs/API_RESOURCES.md → Award Types Reference\n"
             )
             help_text += "- See complete field definitions: /docs/API_RESOURCES.md → Data Dictionary"
-            return [TextContent(type="text", text=f"Error getting count: {error_msg}{help_text}")]
+            return f"Error getting count: {error_msg}{help_text}"
 
         total_count = sum(count_result.get("results", {}).values())
 
@@ -1126,6 +1118,8 @@ def register_tools(
                 "Award Amount",
                 "Description",
                 "Award Type",
+                "Start Date",
+                "End Date",
                 "generated_internal_id",
                 "recipient_hash",
                 "awarding_agency_name",
@@ -1138,8 +1132,19 @@ def register_tools(
             "limit": min(args.get("limit", 10), 100),
         }
 
+        # Add date sorting if requested
+        if args.get("sort_by_date", False):
+            payload["order"] = "desc"
+            payload["sort"] = "Start Date"
+
         # Make the API request for results
-        result = await make_api_request("search/spending_by_award", json_data=payload, method="POST")
+        result = await make_api_request(
+            http_client,
+            "search/spending_by_award",
+            base_url,
+            json_data=payload,
+            method="POST"
+        )
 
         if "error" in result:
             error_msg = result["error"]
@@ -1150,7 +1155,7 @@ def register_tools(
             help_text += "- Check award types: /docs/API_RESOURCES.md → Award Types Reference\n"
             help_text += "- Check NAICS codes: /docs/API_RESOURCES.md → NAICS Codes Reference\n"
             help_text += "- Check PSC codes: /docs/API_RESOURCES.md → PSC Codes Reference"
-            return [TextContent(type="text", text=f"Error fetching results: {error_msg}{help_text}")]
+            return f"Error fetching results: {error_msg}{help_text}"
 
         # Process the results
         awards = result.get("results", [])
@@ -1168,7 +1173,7 @@ def register_tools(
             help_text += "  • Award types: /docs/API_RESOURCES.md → Award Types Reference\n"
             help_text += "- Check date range - data may be limited for future dates\n"
             help_text += "- Consult /docs/API_RESOURCES.md for complete reference information"
-            return [TextContent(type="text", text=help_text)]
+            return help_text
 
         # Filter by excluded keywords and amount range if needed
         exclude_keywords = args.get("exclude_keywords", [])
@@ -1178,8 +1183,8 @@ def register_tools(
         filtered_awards = []
         for award in awards:
             # Check excluded keywords
-            description = award.get("Description", "").lower()
-            recipient = award.get("Recipient Name", "").lower()
+            description = (award.get("Description") or "").lower()
+            recipient = (award.get("Recipient Name") or "").lower()
 
             excluded = any(
                 keyword.lower() in description or keyword.lower() in recipient
@@ -1207,7 +1212,7 @@ def register_tools(
             help_text += "- If using custom filters, verify against:\n"
             help_text += "  • /docs/API_RESOURCES.md → Data Dictionary (field definitions)\n"
             help_text += "  • /docs/API_RESOURCES.md → Glossary (term definitions)"
-            return [TextContent(type="text", text=help_text)]
+            return help_text
 
         # Handle different output formats
         output_format = args.get("output_format", "text")
@@ -1287,7 +1292,7 @@ def register_tools(
             },
         )
 
-        return [TextContent(type="text", text=output)]
+        return output
 
 
 

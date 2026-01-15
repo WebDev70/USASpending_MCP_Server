@@ -128,22 +128,22 @@ class ResultAggregator:
         keyword_lower = [kw.lower() for kw in query_keywords]
 
         # Check description
-        description = award.get("Description", "").lower()
+        description = (award.get("Description") or "").lower()
         if any(kw in description for kw in keyword_lower):
             matched_fields.append("description")
 
         # Check recipient name
-        recipient = award.get("Recipient Name", "").lower()
+        recipient = (award.get("Recipient Name") or "").lower()
         if any(kw in recipient for kw in keyword_lower):
             matched_fields.append("recipient_name")
 
         # Check NAICS description
-        naics_desc = award.get("NAICS Description", "").lower()
+        naics_desc = (award.get("NAICS Description") or "").lower()
         if any(kw in naics_desc for kw in keyword_lower):
             matched_fields.append("naics_description")
 
         # Check PSC description
-        psc_desc = award.get("PSC Description", "").lower()
+        psc_desc = (award.get("PSC Description") or "").lower()
         if any(kw in psc_desc for kw in keyword_lower):
             matched_fields.append("psc_description")
 

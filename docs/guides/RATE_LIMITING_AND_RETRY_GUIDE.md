@@ -141,7 +141,7 @@ rate_limiter.reset(identifier="default")
 ### Phase 1: Infrastructure ✅ COMPLETE
 - [x] Created `src/usaspending_mcp/utils/retry.py` with retry logic
 - [x] Created `src/usaspending_mcp/utils/rate_limit.py` with rate limiting
-- [x] Updated `requirements.txt` with `tenacity` and `slowapi`
+- [x] Updated `pyproject.toml` with `tenacity` and `slowapi`
 - [x] Updated `server.py` imports and initialization
 - [x] Rate limiter initialized at server startup
 - [x] Installed dependencies

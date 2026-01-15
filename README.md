@@ -31,7 +31,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ### 2. Test the Server
@@ -132,8 +132,8 @@ usaspending-mcp/
 │       ├── TESTING_GUIDE.md
 │       ├── SERVER_MANAGER_GUIDE.md
 │       └── PRODUCTION_MONITORING_GUIDE.md
-├── requirements.txt               # Python dependencies
-├── README.md                       # This file
+├── pyproject.toml                 # Project metadata and dependencies
+├── README.md                      # This file
 ├── DOCKER_GUIDE.md                # Docker deployment guide
 ├── CHANGELOG.md                   # Project changelog
 ├── Dockerfile                     # Docker image definition
@@ -349,6 +349,20 @@ The server queries the official USASpending.gov API v2:
 - Documentation: https://api.usaspending.gov/
 - No API key required
 
+### API Request Flow
+
+![MCP API Flow](docs/diagrams/mcp-api-flow.svg)
+
+High-level flow: user prompt → FastMCP tool → tool module builds payload → `httpx` request → USASpending API → JSON response → formatting/enrichment → MCP output.
+
+### Endpoint Map (Selected)
+
+- Awards: `POST /search/spending_by_award`, `POST /search/spending_by_award_count`, `GET /awards/{award_id}`, `GET /subawards/`, `POST /recipients/`, `GET /autocomplete/recipient/`
+- Spending: `POST /search/spending_by_geography/`, `POST /search/spending_over_time/`, `POST /disaster/award/amount/`, `GET /references/data_dictionary/`
+- Classifications: `GET /references/naics/`, `POST /autocomplete/psc/`, `POST /search/spending_by_award/`
+- Profiles: `POST /search/spending_by_award/`, `GET /autocomplete/recipient/`
+- FAR tools: local JSON in `src/usaspending_mcp/data/far/` (no external API)
+
 ### Search Features
 
 - **Keyword search**: Searches award descriptions, recipient names
@@ -365,7 +379,7 @@ The server queries the official USASpending.gov API v2:
 source .venv/bin/activate
 
 # Reinstall dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ### "Permission denied" on scripts
