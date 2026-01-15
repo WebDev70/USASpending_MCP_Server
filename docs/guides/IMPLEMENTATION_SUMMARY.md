@@ -69,7 +69,7 @@ This discovery is the most valuable finding because it serves as the foundationa
    - Documents key discoveries and lessons learned
    - Provides guidance for future API integration work
 
-3. **`/test_set_aside_implementation.py`** (Test Suite)
+3. **`/tests/integration/test_set_aside_implementation.py`** (Test Suite)
    - Comprehensive test of all set-aside filtering scenarios
    - Tests GSA, DoD, VA, and other agencies
    - Validates all major set-aside type combinations
@@ -247,7 +247,7 @@ analyze_small_business()
 | `/docs/API_RESOURCES.md` | API reference links & best practices | ✅ Created |
 | `/docs/reference/set-asides.json` | Set-aside codes reference | ✅ Created |
 | `/src/usaspending_mcp/server.py` | Tool implementations | ✅ Updated |
-| `/test_set_aside_implementation.py` | Test suite | ✅ Created |
+| `/tests/integration/test_set_aside_implementation.py` | Test suite | ✅ Created |
 | `IMPLEMENTATION_SUMMARY.md` | This document | ✅ Created |
 
 ## Next Steps (Optional)
@@ -265,4 +265,3 @@ analyze_small_business()
 The USASpending MCP Server now fully supports filtering federal contracts by procurement set-aside types. All 26+ set-aside codes are available, with user-friendly shortcuts for common categories. The implementation is thoroughly tested, well-documented, and production-ready.
 
 The key to solving this implementation was discovering the right GitHub reference documentation (Data Dictionary) and saving it for future reference in `/docs/API_RESOURCES.md`.
-

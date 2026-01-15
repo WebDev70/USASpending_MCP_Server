@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy project metadata and install Python dependencies
 COPY pyproject.toml /app/
+COPY README.md /app/
 COPY src/ /app/src/
 RUN pip install --user --no-cache-dir .
 
@@ -31,7 +32,6 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 # Copy application code and metadata
 COPY src/ /app/src/
-COPY pyproject.toml /app/
 COPY docker-entrypoint.sh /app/
 
 # Set environment variables
@@ -39,13 +39,13 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install the package (system-wide is fine in containers)
-RUN pip install --no-cache-dir .
-
 # Create logs directory and change ownership to appuser
 RUN mkdir -p /app/logs && \
     chown -R appuser:appuser /app && \
     chmod +x /app/docker-entrypoint.sh
+
+# Smoke test: verify the package imports inside the image
+RUN python -c "import usaspending_mcp"
 
 # Switch to non-root user
 USER appuser
@@ -55,7 +55,7 @@ EXPOSE 3002
 
 # Health check - test if the server is responding on port 3002
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:3002/ || exit 1
+    CMD curl -f http://localhost:3002/mcp || exit 1
 
 # Run the server using the entrypoint script which binds to 0.0.0.0
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

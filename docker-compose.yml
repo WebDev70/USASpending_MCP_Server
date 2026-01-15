@@ -10,7 +10,7 @@ services:
       # Set environment variables here if needed
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
-      LOG_LEVEL: "WARNING"  # Reduce log verbosity (DEBUG, INFO, WARNING, ERROR) 
+      LOG_LEVEL: "WARNING"  # Reduce log verbosity (DEBUG, INFO, WARNING, ERROR)
     volumes:
       # Optional: Mount logs directory for persistence
       - mcp-logs:/app/logs
