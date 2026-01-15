@@ -28,6 +28,7 @@ import sys
 import httpx
 import uvicorn
 from fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 # Import configuration
 from usaspending_mcp.config import ServerConfig
@@ -150,6 +151,15 @@ register_all_tools(
     relevance_scorer,
 )
 logger.info("✅ All tools registered successfully!")
+
+
+# Health check endpoint
+@app.http_app().get("/health")
+async def health(request):
+    """
+    Simple health check endpoint that returns a 200 OK status.
+    """
+    return JSONResponse({"status": "ok"})
 
 
 def run_server():

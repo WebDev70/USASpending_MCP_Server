@@ -54,7 +54,7 @@ EXPOSE 3002
 
 # Health check - test if the server is responding on port 3002
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:3002/mcp || exit 1
+    CMD curl -f http://localhost:3002/health || exit 1
 
 # Run the server using the entrypoint script which binds to 0.0.0.0
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
