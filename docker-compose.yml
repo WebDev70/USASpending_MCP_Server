@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3002/mcp"]
-      interval: 3600s
+      interval: 7200s
       timeout: 10s
       retries: 3
       start_period: 5s
