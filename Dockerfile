@@ -43,11 +43,11 @@ RUN mkdir -p /app/logs && \
     chown -R appuser:appuser /app && \
     chmod +x /app/docker-entrypoint.sh
 
-# Smoke test: verify the package imports inside the image
-RUN python -c "import usaspending_mcp"
-
 # Switch to non-root user
 USER appuser
+
+# Smoke test: verify the package imports inside the image
+RUN python -c "import usaspending_mcp"
 
 # Expose the port
 EXPOSE 3002
