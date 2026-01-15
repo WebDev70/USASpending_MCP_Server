@@ -61,3 +61,6 @@ artifacts:
   objects:
     location: 'gs://mcpserver-logs/'
     paths: ['logs/test.log']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
