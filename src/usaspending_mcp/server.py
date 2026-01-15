@@ -154,7 +154,7 @@ logger.info("✅ All tools registered successfully!")
 
 
 # Health check endpoint
-@app.http_app().get("/health")
+@app.http_app().route("/health", methods=["GET"])
 async def health(request):
     """
     Simple health check endpoint that returns a 200 OK status.
