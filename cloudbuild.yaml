@@ -55,7 +55,7 @@ images:
 substitutions:
   _SERVICE_NAME: usaspending-mcp
   _REGION: us-central1
-  _RUN_INTEGRATION_TESTS: "false"
+  _RUN_INTEGRATION_TESTS: "true"
 
 artifacts:
   objects:
