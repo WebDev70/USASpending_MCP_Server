@@ -8,7 +8,7 @@ steps:
         pip install -e ".[dev]"
         mkdir -p logs
         : > logs/test.log
-        pytest tests/unit -m "not integration"
+        pytest -m "not integration"
   - name: 'python:3.12-slim'
     id: 'Run Integration Tests'
     entrypoint: /bin/bash
@@ -17,7 +17,7 @@ steps:
       - |
         if [ "${_RUN_INTEGRATION_TESTS}" = "true" ]; then
           pip install -e ".[dev]"
-          pytest tests/integration tests/test_set_aside_implementation.py -v
+          pytest -m "integration" -v
         else
           echo "Skipping integration tests (set _RUN_INTEGRATION_TESTS=true to enable)."
         fi
