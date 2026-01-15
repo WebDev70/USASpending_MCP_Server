@@ -7,7 +7,7 @@
 .venv
 .env
 .env.local
-__pycache__
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -28,6 +28,7 @@ htmlcov/
 *.swo
 *~
 .DS_Store
+.claude
 
 # Testing
 tests/
@@ -36,10 +37,8 @@ pytest.ini
 
 # Documentation
 docs/
-README.md
-CLAUDE.md
-GEMINI.md
 *.md
+*.docx
 
 # Other
 .dockerignore
@@ -47,6 +46,9 @@ Dockerfile
 docker-compose.yml
 server_manager.py
 start_mcp_server.sh
+logs/
+*.log
+flake8-report.txt
 node_modules/
 npm-debug.log
 yarn-error.log

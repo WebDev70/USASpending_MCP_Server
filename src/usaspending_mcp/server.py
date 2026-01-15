@@ -22,6 +22,7 @@ All tools are registered through tools/__init__.py:register_all_tools()
 """
 
 import asyncio
+import os
 import sys
 
 import httpx
@@ -153,9 +154,11 @@ logger.info("✅ All tools registered successfully!")
 
 def run_server():
     """Run the server with proper signal handling"""
+    port = int(os.environ.get("PORT", 3002))
+    host = "0.0.0.0"
     try:
-        logger.info("Starting server on http://127.0.0.1:3002")
-        uvicorn.run(app.http_app(), host="127.0.0.1", port=3002, log_level="info", reload=False)
+        logger.info(f"Starting server on http://{host}:{port}")
+        uvicorn.run(app.http_app(), host=host, port=port, log_level="info", reload=False)
     except KeyboardInterrupt:
         logger.info("Received shutdown signal, shutting down gracefully...")
     except Exception as e:
