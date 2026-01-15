@@ -58,4 +58,6 @@ substitutions:
   _RUN_INTEGRATION_TESTS: "true"
 
 artifacts:
-  paths: ['logs/test.log']
+  objects:
+    location: 'gs://mcpserver-logs/logs/'
+    paths: ['logs/test.log']
