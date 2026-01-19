@@ -1,5 +1,5 @@
 services:
-  usaspending-mcp:
+  usaspending-mcp1:
     build:
       context: .
       dockerfile: Dockerfile

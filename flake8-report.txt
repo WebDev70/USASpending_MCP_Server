@@ -4,8 +4,8 @@
 ./server_manager.py:305:23: F541 f-string is missing placeholders
 ./server_manager.py:307:23: F541 f-string is missing placeholders
 ./server_manager.py:325:27: F541 f-string is missing placeholders
-./src/usaspending_mcp/server.py:67:1: E402 module level import not at top of file
-./src/usaspending_mcp/server.py:135:1: E402 module level import not at top of file
+./src/usaspending_mcp/server.py:69:1: E402 module level import not at top of file
+./src/usaspending_mcp/server.py:137:1: E402 module level import not at top of file
 ./src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.awards' imported but unused
 ./src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.spending' imported but unused
 ./src/usaspending_mcp/tools/__init__.py:47:5: F401 'usaspending_mcp.tools.classifications' imported but unused
@@ -187,8 +187,8 @@
 ./tests/conftest.py:8:1: F401 'json' imported but unused
 ./tests/conftest.py:9:1: F401 'datetime.datetime' imported but unused
 ./tests/conftest.py:10:1: F401 'unittest.mock.patch' imported but unused
-./tests/test_set_aside_implementation.py:11:1: F401 'json' imported but unused
-./tests/test_set_aside_implementation.py:48:15: F541 f-string is missing placeholders
+./tests/integration/test_set_aside_implementation.py:10:1: F401 'json' imported but unused
+./tests/integration/test_set_aside_implementation.py:37:101: E501 line too long (107 > 100 characters)
 ./tests/unit/test_conversation_logging.py:10:1: F401 'datetime.datetime' imported but unused
 ./tests/unit/test_conversation_logging.py:15:1: F401 'usaspending_mcp.utils.conversation_logging.log_conversation' imported but unused
 ./tests/unit/test_tools.py:8:1: F401 'asyncio' imported but unused
