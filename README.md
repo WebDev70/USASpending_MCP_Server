@@ -1,4 +1,4 @@
-# USASpending MCP Server with FAR Regulatory Tools
+# USASpending MCP Server with FAR Regulatory Toolz
 
 A FastMCP server that provides access to USASpending.gov federal spending data and FAR (Federal Acquisition Regulation) lookup tools through the Model Context Protocol (MCP). Query contracts, grants, loans, and other federal awards using natural language, and reference procurement regulations instantly.
 
